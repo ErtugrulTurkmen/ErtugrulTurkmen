@@ -1,5 +1,3 @@
-# Hi there! I'm Ertuğrul 👋
-
 <p align="left">
   <a href="https://linkedin.com/in/linkedin.com/in/ertuğrul-efe-türkmen-7676282b8" target="_blank">
     <img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" />
