@@ -1,5 +1,5 @@
 <p align="left">
-  <a href="https://linkedin.com/in/linkedin.com/in/ertuğrul-efe-türkmen-7676282b8" target="_blank">
+  <a href="https://linkedin.com/in/ertuğrul-efe-türkmen-7676282b8" target="_blank">
     <img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" />
   </a>
   <a href="mailto:ertugrulturkmen@proton.me">
@@ -63,26 +63,3 @@ I focus on mastering technologies not just by their syntax, but through their ar
 
 #### 🛡️ Core Concepts & Approaches
 `Cybersecurity Fundamentals` `Secure Architecture (SafeStorage, Obfuscation)` `Object-Oriented Programming (OOP)` `Operating Systems` `Offline-First Architecture` `Clean Code`
-
----
-
-### 📊 GitHub Stats
-
-<p align="left">
-  <img src="https://github-readme-stats.vercel.app/api?username=ErtugrulTurkmen&show_icons=true&theme=dark&hide_border=true&bg_color=0d1117" alt="GitHub Stats" />
-</p>
-
-<!--
-**ErtugrulTurkmen/ErtugrulTurkmen** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
-
-Here are some ideas to get you started:
-
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
