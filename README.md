@@ -27,7 +27,7 @@ I am expanding my skill set to build more secure and type-safe systems. The tech
 ![C#](https://img.shields.io/badge/C%23-239120?style=for-the-badge&logo=c-sharp&logoColor=white)
 ![Unity](https://img.shields.io/badge/Unity-100000?style=for-the-badge&logo=unity&logoColor=white)
 
-*(Specifically, Rust's memory safety and performance perfectly align with my vision for cybersecurity and systems programming.)*
+*(While Rust's memory safety aligns with my systems programming vision, I am leveraging C# and Unity to bring Object-Oriented (OOP) architectures into game engine dynamics and 3D simulations.)*
 
 ---
 
