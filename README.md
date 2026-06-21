@@ -36,7 +36,6 @@ I am expanding my skill set to build more secure and type-safe systems. The tech
 I focus on mastering technologies not just by their syntax, but through their architectural best practices.
 
 #### 💻 Programming Languages
-![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)
 ![C++](https://img.shields.io/badge/C++-00599C?style=flat-square&logo=c%2B%2B&logoColor=white)
 ![SQL](https://img.shields.io/badge/SQL-4479A1?style=flat-square&logo=postgresql&logoColor=white)
 
