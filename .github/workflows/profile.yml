@@ -1,0 +1,80 @@
+# Redraws the profile from live GitHub data every 6 hours and publishes the drawings to the
+# `output` branch, which README.md reads its images from. Commits come from github-actions[bot]
+# on that branch only, so main's history and the contributor list stay the owner's alone.
+#
+# Needs one secret, PROFILE_TOKEN: a fine-grained personal access token of the owner, read-only,
+# "All repositories", permissions Metadata: read and Contents: read, with an expiry date. Only the
+# fetch step can see it.
+name: profile
+
+on:
+  schedule:
+    - cron: '17 */6 * * *' # off the hour: jobs queued at :00 are the ones GitHub delays
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: profile
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # push to the output branch
+    steps:
+      # Until the secret exists, skip with a warning instead of failing (and e-mailing) every 6 hours.
+      - name: Check for the token
+        id: token
+        env:
+          HAS_TOKEN: ${{ secrets.PROFILE_TOKEN != '' }}
+        run: |
+          if [ "$HAS_TOKEN" != 'true' ]; then echo '::warning::PROFILE_TOKEN is not set, so nothing was redrawn.'; fi
+          echo "ok=$HAS_TOKEN" >> "$GITHUB_OUTPUT"
+
+      - if: steps.token.outputs.ok == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - if: steps.token.outputs.ok == 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Fetch numbers
+        if: steps.token.outputs.ok == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.PROFILE_TOKEN }}
+        run: node src/fetch.ts
+
+      - name: Draw
+        if: steps.token.outputs.ok == 'true'
+        run: node src/build.ts
+
+      - name: Publish to the output branch
+        if: steps.token.outputs.ok == 'true'
+        env:
+          TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          remote="https://x-access-token:${TOKEN}@github.com/${REPO}.git"
+          out="$RUNNER_TEMP/output"
+          if git ls-remote --exit-code --heads "$remote" output >/dev/null; then
+            git clone --quiet --depth 1 --branch output "$remote" "$out"
+          else
+            git init --quiet --initial-branch output "$out"
+          fi
+          rsync -a --delete assets/ "$out/assets/"
+          cd "$out"
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'Nothing changed.'
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit --quiet -m "Redraw from GitHub data, $(date -u +%F)"
+          git push --quiet "$remote" HEAD:output

@@ -1,0 +1,14 @@
+{
+  "name": "ertugrulturkmen-profile",
+  "private": true,
+  "type": "module",
+  "description": "Generates the GitHub profile README and every SVG it shows. No dependencies.",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "fetch": "node src/fetch.ts",
+    "build": "node src/build.ts",
+    "preview": "node src/preview.ts"
+  }
+}
