@@ -8,6 +8,9 @@ export type P3 = readonly [number, number, number];
 
 const COS = Math.cos(Math.PI / 6);
 
+/** A fill or label fades in this long after its outline starts, once most of the 1.3s stroke is down. */
+const FILL_AFTER = 800;
+
 export type Art = { svg: string; w: number; h: number };
 
 export class Pen {
@@ -60,7 +63,7 @@ export class Pen {
     return `<path d="${d}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round" pathLength="1" class="d" style="animation-delay:${this.next()}ms"/>`;
   }
 
-  fill(d: string, color: string, delay = this.delay + 400): string {
+  fill(d: string, color: string, delay = this.delay + FILL_AFTER): string {
     return `<path d="${d}" fill="${color}" class="f" style="animation-delay:${Math.round(delay)}ms"/>`;
   }
 
@@ -70,7 +73,7 @@ export class Pen {
     const top: P3[] = [[x, y, z + h], [x + w, y, z + h], [x + w, y + dd, z + h], [x, y + dd, z + h]];
     const right: P3[] = [[x + w, y, z], [x + w, y + dd, z], [x + w, y + dd, z + h], [x + w, y, z + h]];
     const left: P3[] = [[x, y + dd, z], [x + w, y + dd, z], [x + w, y + dd, z + h], [x, y + dd, z + h]];
-    const at = this.delay + 400;
+    const at = this.delay + FILL_AFTER;
     let out = this.fill(this.d(left, true), f.left, at) + this.fill(this.d(right, true), f.right, at) + this.fill(this.d(top, true), f.top, at);
     if (o.hatch) out += this.fill(this.d(right, true), 'url(#hatch)', at);
     const outline =
@@ -91,7 +94,7 @@ export class Pen {
     this.include(bx + rx, by + ry);
     const side = `M${round(tx - rx)} ${round(ty)}L${round(bx - rx)} ${round(by)}A${rx} ${ry} 0 0 0 ${round(bx + rx)} ${round(by)}L${round(tx + rx)} ${round(ty)}Z`;
     const cap = `M${round(tx - rx)} ${round(ty)}a${rx} ${ry} 0 1 0 ${round(2 * rx)} 0a${rx} ${ry} 0 1 0 ${round(-2 * rx)} 0`;
-    const at = this.delay + 400;
+    const at = this.delay + FILL_AFTER;
     let out = this.fill(side, f.left, at) + this.fill(cap, f.top, at);
     let lines = `M${round(tx - rx)} ${round(ty)}L${round(bx - rx)} ${round(by)}A${rx} ${ry} 0 0 0 ${round(bx + rx)} ${round(by)}L${round(tx + rx)} ${round(ty)}` + cap;
     for (const rz of o.rings ?? []) {
@@ -120,7 +123,7 @@ export class Pen {
     const left = o.anchor === 'end' ? x - w : o.anchor === 'middle' ? x - w / 2 : x;
     this.include(left, y - o.size);
     this.include(left + w, y + 3);
-    return text(x, y, s, { ...o, cls: 'f', delay: delay ?? this.delay });
+    return text(x, y, s, { ...o, cls: 'f', delay: delay ?? this.delay + FILL_AFTER });
   }
 
   /** Wraps the drawing so its bounding box starts at (pad, pad). */

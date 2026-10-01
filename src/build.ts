@@ -4,7 +4,7 @@ import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { calendar3d } from './calendar.ts';
 import { profile, projects, skills } from './content.ts';
 import { loadCalendar, loadStats } from './data.ts';
-import { aboutPanel, button, caseHeader, cardHeight, featureCard, hero, projectCard, sectionHeader, skillsPanel, titleBlock } from './panels.ts';
+import { aboutPanel, button, caseHeader, cardHeight, hero, projectCard, sectionHeader, skillsPanel, titleBlock, wideCard } from './panels.ts';
 import { aboutAlt, cardAlt, caseStudy, heroAlt, readme, skillsAlt, titleAlt } from './readme.ts';
 import { cases } from './cases.ts';
 import type { Layout } from './svg.ts';
@@ -28,13 +28,22 @@ const name = (base: string, layout: Layout, mode: string) => `${base}${layout ==
 
 const [feature, ...rest] = projects;
 
+// Only Work carries a note: the others would repeat what their section already says.
+const inProduction = projects.filter((p) => p.status === 'live' || p.status === 'in-use').length;
 const sections: [string, string, string | undefined][] = [
   ['about', 'About', undefined],
-  ['work', 'Selected work', `${projects.length} PROJECTS · ${projects.filter((p) => p.status === 'live').length} LIVE`],
-  ['skills', 'Skills', `${skills.groups.length} GROUPS · LEARNING ${skills.learning.join(', ').toUpperCase()}`],
-  ['activity', 'Activity', `${stats.contributionsLastYear} CONTRIBUTIONS · 12 MONTHS`],
-  ['contact', 'Contact', 'LINKEDIN · EMAIL'],
+  ['work', 'Selected work', `${projects.length} PROJECTS · ${inProduction} IN PRODUCTION`],
+  ['skills', 'Skills', undefined],
+  ['activity', 'Activity', undefined],
+  ['contact', 'Contact', undefined],
 ];
+
+// Card variants, chosen in the README by width: `-mobile` on phones, `-wide` (one per row,
+// full width) between phone and 1280px, and the plain name for the 2×2 grid. The first card of
+// each pair carries the gap below it in its stacked variants, where the pair sits one above the
+// other within a paragraph; 20px drawn, about 16px once scaled, plus the 5.5px line gap.
+const STACK_GAP = { wide: 20, mobile: 18 };
+const CALENDAR_FIG = projects.length + 1;
 
 for (const t of themes) {
   for (const layout of ['desktop', 'mobile'] as const) {
@@ -45,17 +54,23 @@ for (const t of themes) {
     sections.forEach(([slug, title, meta], i) => write(name(`h-${slug}`, layout, t.mode), sectionHeader(t, layout, i + 1, title, meta)));
     projects.forEach((pr, i) => write(name(`case-${pr.slug}`, layout, t.mode), caseHeader(t, layout, pr, i + 1, `${pr.name} case study`)));
   }
-  write(name(`card-${feature.slug}`, 'desktop', t.mode), featureCard(t, feature, 1, cardAlt(feature)));
-  write(name(`card-${feature.slug}`, 'mobile', t.mode), projectCard(t, feature, 1, cardHeight(t, feature), cardAlt(feature)));
-  const h = Math.max(...rest.map((pr) => cardHeight(t, pr)));
-  rest.forEach((pr, i) => write(name(`card-${pr.slug}`, 'desktop', t.mode), projectCard(t, pr, i + 2, h, cardAlt(pr))));
-  write(name('calendar', 'desktop', t.mode), calendar3d(t, days, `${stats.contributionsLastYear} contributions in the last 12 months`));
+  write(name(`card-${feature.slug}`, 'desktop', t.mode), wideCard(t, feature, 1, cardAlt(feature)));
+  write(name(`card-${feature.slug}`, 'mobile', t.mode), projectCard(t, feature, 1, cardAlt(feature), { layout: 'mobile' }));
+  const h = Math.max(...rest.map((pr) => cardHeight(t, pr, 'desktop')));
+  rest.forEach((pr, i) => {
+    const first = i % 2 === 0;
+    write(name(`card-${pr.slug}`, 'desktop', t.mode), projectCard(t, pr, i + 2, cardAlt(pr), { layout: 'desktop', side: first ? 'left' : 'right', H: h }));
+    write(`card-${pr.slug}-wide-${t.mode}.svg`, wideCard(t, pr, i + 2, cardAlt(pr), first ? STACK_GAP.wide : 0));
+    write(name(`card-${pr.slug}`, 'mobile', t.mode), projectCard(t, pr, i + 2, cardAlt(pr), { layout: 'mobile', padBottom: first ? STACK_GAP.mobile : 0 }));
+  });
+  for (const layout of ['desktop', 'mobile'] as const) {
+    write(name('calendar', layout, t.mode), calendar3d(t, layout, days, CALENDAR_FIG, `${stats.contributionsLastYear} contributions in the last 12 months`));
+  }
+  write(`btn-${feature.slug}-${t.mode}.svg`, button(t, 'primary', 'VIEW ON THE APP STORE', `${feature.name} on the App Store`));
+  write(`btn-case-${t.mode}.svg`, button(t, 'secondary', 'READ THE CASE STUDY', `${feature.name} case study`));
+  write(`btn-linkedin-${t.mode}.svg`, button(t, 'secondary', 'LINKEDIN', 'LinkedIn'));
+  write(`btn-email-${t.mode}.svg`, button(t, 'secondary', profile.email.toUpperCase(), `Email ${profile.email}`));
 }
-
-write(`btn-${feature.slug}.svg`, button('primary', 'VIEW ON THE APP STORE', `${feature.name} on the App Store`));
-write('btn-case.svg', button('secondary', 'READ THE CASE STUDY', `${feature.name} case study`));
-write('btn-linkedin.svg', button('secondary', 'LINKEDIN', 'LinkedIn'));
-write('btn-email.svg', button('secondary', profile.email.toUpperCase(), `Email ${profile.email}`));
 
 writeFileSync(new URL('README.md', ROOT), readme(profile, projects, skills));
 

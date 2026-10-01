@@ -2,8 +2,11 @@ import { MONO, SERIF, type Theme } from './theme.ts';
 
 export type Layout = 'desktop' | 'mobile';
 
-/** README column widths the assets are drawn for (GitHub: 846px desktop, 278–308px phones). */
-export const WIDTH: Record<Layout, number> = { desktop: 846, mobile: 400 };
+/**
+ * Widths the assets are drawn at. GitHub's README column is 846px from a 1280px viewport up, and
+ * 278–520px where the phone drawings are shown (src/readme.ts PHONE), so 320 renders near 1:1.
+ */
+export const WIDTH: Record<Layout, number> = { desktop: 846, mobile: 320 };
 
 export const esc = (s: string): string =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -39,35 +42,58 @@ export function measure(s: string, f: Font): number {
 }
 
 /**
- * Wraps at `sep` (words by default) into as few lines as fit `maxWidth`, then evens the lines
- * out so the last one is never a lone orphan.
+ * Wraps at `sep` (words by default) into as few lines as fit `maxWidth`, then chooses, among the
+ * breaks giving that many lines, the raggedness a typesetter would: lines before the last as full
+ * as possible, and a last line of at least 40% so it is never a lone orphan. Two capitalised words
+ * in a row are a name ("Claude Code", "App Store") and never break apart.
  */
 export function wrap(s: string, maxWidth: number, f: Font, sep = ' '): string[] {
-  const greedy = (limit: number): string[] => {
-    const lines: string[] = [];
-    let line = '';
-    for (const word of s.split(sep)) {
-      const next = line ? line + sep + word : word;
-      if (line && measure(next, f) > limit) {
-        lines.push(line);
-        line = word;
-      } else {
-        line = next;
+  const words: string[] = [];
+  for (const w of s.split(sep)) {
+    const prev = words.at(-1);
+    if (sep === ' ' && prev && !prev.includes(sep) && /^[A-Z]/.test(prev) && /[A-Za-z]$/.test(prev) && /^[A-Z]/.test(w)) words[words.length - 1] = prev + sep + w;
+    else words.push(w);
+  }
+  const width = (i: number, j: number) => measure(words.slice(i, j).join(sep), f);
+  // Greedy fill gives the fewest lines.
+  let count = 0;
+  for (let i = 0; i < words.length; count++) {
+    let j = i + 1;
+    while (j < words.length && width(i, j + 1) <= maxWidth) j++;
+    i = j;
+  }
+  if (count < 2) return [words.join(sep)];
+  // best[k][j]: least cost of setting the first j words in k lines, where a line costs its squared
+  // shortfall from the full width, and the last line only costs if it is shorter than 40%.
+  const n = words.length;
+  const best = Array.from({ length: count + 1 }, () => new Array<number>(n + 1).fill(Infinity));
+  const from = Array.from({ length: count + 1 }, () => new Array<number>(n + 1).fill(0));
+  best[0][0] = 0;
+  for (let k = 1; k <= count; k++) {
+    for (let j = 1; j <= n; j++) {
+      for (let i = k - 1; i < j; i++) {
+        const w = width(i, j);
+        if (w > maxWidth && j - i > 1) continue;
+        const last = k === count && j === n;
+        const cost = best[k - 1][i] + (last ? (w < maxWidth * 0.4 ? (maxWidth * 0.4 - w) ** 2 * 4 : 0) : (maxWidth - w) ** 2);
+        if (cost < best[k][j]) {
+          best[k][j] = cost;
+          from[k][j] = i;
+        }
       }
     }
-    if (line) lines.push(line);
-    return lines;
-  };
-  const lines = greedy(maxWidth);
-  if (lines.length < 2) return lines;
-  for (let limit = measure(s, f) / lines.length; limit < maxWidth; limit += 4) {
-    const balanced = greedy(limit);
-    if (balanced.length === lines.length) return balanced;
+  }
+  const lines: string[] = [];
+  for (let k = count, j = n; k > 0; k--) {
+    const i = from[k][j];
+    lines.unshift(words.slice(i, j).join(sep));
+    j = i;
   }
   return lines;
 }
 
-type TextOptions = Font & { fill?: string; anchor?: 'middle' | 'end'; cls?: string; delay?: number };
+/** `hidden`: starts transparent as an attribute, for text that CSS reveals and a CSS-less renderer must not show. */
+type TextOptions = Font & { fill?: string; anchor?: 'middle' | 'end'; cls?: string; delay?: number; hidden?: boolean };
 
 export function text(x: number, y: number, s: string, o: TextOptions): string {
   const cls = [o.mono && 'm', o.cls].filter(Boolean).join(' ');
@@ -81,6 +107,7 @@ export function text(x: number, y: number, s: string, o: TextOptions): string {
     o.anchor && `text-anchor="${o.anchor}"`,
     cls && `class="${cls}"`,
     o.delay !== undefined && `style="animation-delay:${Math.round(o.delay)}ms"`,
+    o.hidden && 'opacity="0"',
   ].filter(Boolean);
   return `<text ${attrs.join(' ')}>${esc(s)}</text>`;
 }
@@ -97,8 +124,8 @@ export const sheet = (t: Theme, x: number, y: number, w: number, h: number, r = 
   `<rect x="${x + 0.5}" y="${y + 0.5}" width="${round(w - 1)}" height="${round(h - 1)}" rx="${r}" fill="url(#grid)" stroke="${t.rule}"/>`;
 
 /** kami tag: solid fill, mono caps. */
-export function tag(t: Theme, x: number, y: number, label: string, anchor: 'start' | 'end' = 'start'): { svg: string; w: number } {
-  const font: Font = { size: 10.5, tracking: 1, mono: true };
+export function tag(t: Theme, x: number, y: number, label: string, anchor: 'start' | 'end' = 'start', size = 10.5): { svg: string; w: number } {
+  const font: Font = { size, tracking: 1, mono: true };
   const w = measure(label, font) + 16;
   const left = anchor === 'end' ? x - w : x;
   return {

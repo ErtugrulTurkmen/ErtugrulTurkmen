@@ -2,12 +2,15 @@ import type { CaseStudy } from './cases.ts';
 import type { Profile, Project, Skills, Status } from './content.ts';
 import { esc } from './svg.ts';
 
-// Alt text carries everything each SVG says. Three ways an image gets onto the page:
-// - pic():    unlinked <picture>. Dark is default and fallback; light and phone variants by media query.
-// - linked(): a clickable image. GitHub pulls <img> out of a <picture> nested in <a> (checked with
-//             its Markdown API, 2026-09-30), so each theme gets its own <a>, hidden by GitHub's CSS
-//             rule `.readme [href$="#gh-light-mode-only"]{display:none}` and its dark twin.
-// - button(): one image that reads on both themes, for mailto: where a fragment is unsafe.
+// Alt text carries everything each SVG says. Two ways an image gets onto the page:
+// - pic():    one <a> per theme, hidden by GitHub's CSS rule `.readme [href$="#gh-light-mode-only"]
+//             {display:none}` and its dark twin, so the theme follows the viewer's GitHub setting.
+//             Width variants are a <picture> inside with width-only media queries. prefers-color-scheme
+//             is never combined with a width: for viewers with an explicit theme, GitHub's
+//             <themed-picture> rewrites such a query to always or never match, which drops the width
+//             with it and served phone drawings to desktops (checked 2026-09-30).
+// - button(): a <picture> with a prefers-color-scheme source alone, which <themed-picture> handles
+//             correctly; a #gh- fragment is unsafe on a mailto: link.
 
 const STATUS_TEXT: Record<Status, string> = {
   live: 'live',
@@ -23,32 +26,45 @@ const STATUS_TEXT: Record<Status, string> = {
  */
 export const ASSETS = 'https://raw.githubusercontent.com/ErtugrulTurkmen/ErtugrulTurkmen/output/assets/';
 
-const src = (name: string, mode: 'dark' | 'light', mobile = false, base = ASSETS) => `${base}${name}${mobile ? '-mobile' : ''}-${mode}.svg`;
+/**
+ * Where the phone drawings are shown: wherever GitHub's README column is 520px or narrower. It is
+ * the viewport minus 82px below 768px, and minus 370px from 768px to 1011px, where the profile
+ * sidebar moves beside it (measured 2026-10-01). From 1280px up the column is 846px.
+ */
+const PHONE = '(max-width: 600px), (min-width: 768px) and (max-width: 890px)';
+/** Below a full 846px column, two half-width cards no longer fit side by side. */
+// Phone drawings keep their 320px where the column is wider (up to 520px): images only shrink to
+// fit, never grow, so every image paragraph is centred to keep that narrower strip in the middle.
+const NOT_FULL = '(max-width: 1279px)';
 
-/** `mobile`: the asset also has a phone-width variant. */
-export function pic(name: string, alt: string, mobile = false, base = ASSETS): string {
-  const sources = [
-    mobile && `<source media="(max-width: 600px) and (prefers-color-scheme: light)" srcset="${src(name, 'light', true, base)}">`,
-    mobile && `<source media="(max-width: 600px)" srcset="${src(name, 'dark', true, base)}">`,
-    `<source media="(prefers-color-scheme: light)" srcset="${src(name, 'light', false, base)}">`,
-  ].filter(Boolean);
-  return `<picture>${sources.join('')}<img alt="${esc(alt)}" src="${src(name, 'dark', false, base)}"></picture>`;
+const src = (name: string, mode: 'dark' | 'light', variant = '') => `${ASSETS}${name}${variant}-${mode}.svg`;
+
+/**
+ * `mobile`: the asset has a phone variant. `wide`: a card with a full-width variant for columns
+ * too narrow for the 2×2 grid. `href`: where a click goes; none by default.
+ */
+export function pic(name: string, alt: string, { mobile = false, wide = false, href = '' } = {}): string {
+  return (['dark', 'light'] as const)
+    .map((mode) => {
+      const img = `<img alt="${esc(alt)}" src="${src(name, mode)}">`;
+      const sources = [mobile && [PHONE, '-mobile'], wide && [NOT_FULL, '-wide']]
+        .filter((x): x is [string, string] => Boolean(x))
+        .map(([media, variant]) => `<source media="${media}" srcset="${src(name, mode, variant)}">`)
+        .join('');
+      return `<a href="${esc(href)}#gh-${mode}-mode-only">${sources ? `<picture>${sources}${img}</picture>` : img}</a>`;
+    })
+    .join('');
 }
 
-export const linked = (href: string, name: string, alt: string): string =>
-  (['dark', 'light'] as const)
-    .map((mode) => `<a href="${href}#gh-${mode}-mode-only"><img alt="${esc(alt)}" src="${src(name, mode)}"></a>`)
-    .join('');
-
 const button = (href: string, name: string, alt: string): string =>
-  `<a href="${href}"><img alt="${esc(alt)}" src="${ASSETS}${name}.svg"></a>`;
+  `<a href="${esc(href)}"><picture><source media="(prefers-color-scheme: light)" srcset="${src(name, 'light')}"><img alt="${esc(alt)}" src="${src(name, 'dark')}"></picture></a>`;
 
 // README.md on main changes only when its owner rebuilds it, while the drawings refresh every
 // 6 hours, so alt text carries no live numbers that would go stale between the two.
 export const heroAlt = (p: Profile): string =>
   `${p.name}. ${p.eyebrow}. ${p.tagline} Focus: ${p.focus.join(', ')}. ` +
   `${p.now.map((n) => `${n.label}: ${n.text}`).join('. ')}. ` +
-  'With contributions, commits, repositories and main language over the last 12 months, private work included.';
+  'With contributions over the last 12 months, commits in my own repositories, repository count and main language, private work included.';
 
 export const cardAlt = (pr: Project): string =>
   `${pr.name} (${STATUS_TEXT[pr.status]}, ${pr.visibility.replace('-', ' ')} source): ${pr.kind}. ${pr.summary} ` +
@@ -65,54 +81,61 @@ export const titleAlt = (p: Profile): string =>
   `Drawn by ${p.name}. Checked by GitHub Actions every 6 hours, with the date of the last revision. ` +
   'Numbers and drawings are regenerated from live GitHub data; private work is counted, never named.';
 
+// Images that share a paragraph share one line: GitHub's renderers disagree on whether a newline
+// inside a paragraph is a space or a <br>.
 export function readme(p: Profile, projects: Project[], skills: Skills): string {
   const [feature, ...rest] = projects;
   const rows: string[] = [];
   for (let i = 0; i < rest.length; i += 2) {
-    rows.push(rest.slice(i, i + 2).map((pr) => linked(pr.href, `card-${pr.slug}`, cardAlt(pr))).join('\n'));
+    // No whitespace between the pair: its gutter is drawn inside the two images.
+    rows.push(rest.slice(i, i + 2).map((pr) => pic(`card-${pr.slug}`, cardAlt(pr), { mobile: true, wide: true, href: pr.href })).join(''));
   }
   return `<!-- Generated by src/build.ts from src/content.ts and data/. Edit those, then run: npm run build -->
 
-${pic('hero', heroAlt(p), true)}
+<p align="center">${pic('hero', heroAlt(p), { mobile: true })}</p>
 
-${pic('h-about', 'About', true)}
+<p align="center">${pic('h-about', 'About', { mobile: true })}</p>
 
-${pic('about', aboutAlt(p), true)}
+<p align="center">${pic('about', aboutAlt(p), { mobile: true })}</p>
 
-${pic('h-work', 'Selected work', true)}
+<p align="center">${pic('h-work', 'Selected work', { mobile: true })}</p>
 
-${pic(`card-${feature.slug}`, cardAlt(feature), true)}
+<p align="center">${pic(`card-${feature.slug}`, cardAlt(feature), { mobile: true, href: `projects/${feature.slug}.md` })}</p>
 
-${button(feature.href, `btn-${feature.slug}`, `${feature.name} on the App Store`)}
-${button(`projects/${feature.slug}.md`, 'btn-case', `${feature.name} case study`)}
+${button(feature.href, `btn-${feature.slug}`, `${feature.name} on the App Store`)} ${button(`projects/${feature.slug}.md`, 'btn-case', `${feature.name} case study`)}
 
-${rows.join('\n\n')}
+${rows.map((row) => `<p align="center">${row}</p>`).join('\n\n')}
 
-${pic('h-skills', 'Skills', true)}
+<p align="center">${pic('h-skills', 'Skills', { mobile: true })}</p>
 
-${pic('skills', skillsAlt(skills), true)}
+<p align="center">${pic('skills', skillsAlt(skills), { mobile: true })}</p>
 
-${pic('h-activity', 'Activity', true)}
+<p align="center">${pic('h-activity', 'Activity', { mobile: true })}</p>
 
-${pic('calendar', '3D contribution calendar of the last 12 months, private work included.')}
+<p align="center">${pic('calendar', '3D contribution calendar of the last 12 months, private work included, with the busiest day marked.', { mobile: true })}</p>
 
-${pic('h-contact', 'Contact', true)}
+<p align="center">${pic('h-contact', 'Contact', { mobile: true })}</p>
 
-${button(p.linkedin, 'btn-linkedin', 'LinkedIn')}
-${button(`mailto:${p.email}`, 'btn-email', `Email ${p.email}`)}
+${button(p.linkedin, 'btn-linkedin', 'LinkedIn')} ${button(`mailto:${p.email}`, 'btn-email', `Email ${p.email}`)}
 
-${pic('titleblock', titleAlt(p), true)}
+<p align="center">${pic('titleblock', titleAlt(p), { mobile: true })}</p>
 `;
 }
 
 const list = (items: string[]) => items.map((i) => `- ${i}`).join('\n');
+
+const SOURCE_NOTE: Record<Project['visibility'], string> = {
+  private: 'the source is described, never shown.',
+  'soon-public': 'the source will be public.',
+  public: 'the source is public.',
+};
 
 /** A project's case-study page, projects/<slug>.md. */
 export function caseStudy(pr: Project, n: number, c: CaseStudy): string {
   const links = c.links?.map(([label, href]) => `[${label}](${href})`).join(' · ');
   return `<!-- Generated by src/build.ts from src/cases.ts. Edit that, then run: npm run build -->
 
-${pic(`case-${pr.slug}`, `${pr.name}: ${pr.caption}. ${pr.kind}. Stack: ${pr.stack.join(', ')}.`, true)}
+<p align="center">${pic(`case-${pr.slug}`, `${pr.name}: ${pr.caption}. ${pr.kind}. Stack: ${pr.stack.join(', ')}.`, { mobile: true })}</p>
 
 > ${pr.summary}
 
@@ -138,6 +161,6 @@ ${c.status}${links ? `\n\n${links}` : ''}
 
 ---
 
-<sub>Sheet 0${n + 1} of the drawing set on [my profile](https://github.com/ErtugrulTurkmen) · the source is described, never shown.</sub>
+<sub>Sheet ${String(n + 1).padStart(2, '0')} of the drawing set on [my profile](https://github.com/ErtugrulTurkmen) · ${SOURCE_NOTE[pr.visibility]}</sub>
 `;
 }

@@ -56,11 +56,12 @@ export const dark: Theme = {
   tagText: '#c9d8ec',
   faces: { top: '#282826', left: '#1f1f1d', right: '#171716' },
   accentFaces: { top: '#223a5a', left: '#1b2f4a', right: '#15253b' }, // derived from ink blue
-  calendar: ['#252523', '#1f3350', '#2d5a8a', '#5b83b3', '#8fb0d8'],
+  calendar: ['#252523', '#26426a', '#2d5a8a', '#5b83b3', '#8fb0d8'], // level 1 lifted off the floor (1.2:1 → 1.5:1)
 };
 
 export const themes = [dark, light] as const;
 
-// kami sets everything in serif; labels are mono, as on a drawing's title block.
-export const SERIF = `Charter, 'Bitstream Charter', 'Iowan Old Style', 'Sitka Text', Cambria, Georgia, serif`;
+// kami sets everything in serif; labels are mono, as on a drawing's title block. Cambria comes
+// before Sitka (wider) and Georgia (old-style figures that make numbers bounce).
+export const SERIF = `Charter, 'Bitstream Charter', 'Iowan Old Style', Cambria, 'Sitka Text', Georgia, serif`;
 export const MONO = `ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace`;
