@@ -7,11 +7,7 @@ export type Day = { date: string; week: number; weekday: number; count: number }
 
 export type Stats = {
   fetchedAt: string; // YYYY-MM-DD
-  daysOnGitHub: number;
   contributionsLastYear: number; // includes private work, anonymised by GitHub
-  activeDays: number;
-  longestStreak: number;
-  currentStreak: number;
   commitsAllTime: number;
   repos: { total: number; public: number; private: number };
   languages: { name: string; pct: number }[]; // by bytes across owned repos, largest first
