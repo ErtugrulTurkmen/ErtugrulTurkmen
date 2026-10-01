@@ -10,6 +10,11 @@ name: profile
 on:
   schedule:
     - cron: '17 */6 * * *' # off the hour: jobs queued at :00 are the ones GitHub delays
+  # A push that changes what the README shows redraws at once, so the README never points at
+  # drawings that do not exist yet on the output branch.
+  push:
+    branches: [main]
+    paths: ['src/**', 'README.md', 'projects/**', '.github/workflows/profile.yml']
   workflow_dispatch:
 
 permissions: {}
@@ -50,10 +55,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PROFILE_TOKEN }}
         run: node src/fetch.ts
 
+      # README.md and projects/ carry no live data, so a rebuild that changes them means main was
+      # pushed without rebuilding, and publishing would leave images the README does not name.
       - name: Draw
         if: steps.token.outputs.ok == 'true'
-        run: node src/build.ts
+        run: |
+          node src/build.ts
+          git diff --exit-code --stat -- README.md projects/ || { echo '::error::README.md or projects/ is out of date: run npm run build and commit.'; exit 1; }
 
+      # The branch holds one commit, replaced on every change: the drawings need no history, and a
+      # commit per redraw would grow the repository by about 40 KB each time, for ever.
       - name: Publish to the output branch
         if: steps.token.outputs.ok == 'true'
         env:
@@ -63,18 +74,17 @@ jobs:
           set -euo pipefail
           remote="https://x-access-token:${TOKEN}@github.com/${REPO}.git"
           out="$RUNNER_TEMP/output"
-          if git ls-remote --exit-code --heads "$remote" output >/dev/null; then
-            git clone --quiet --depth 1 --branch output "$remote" "$out"
-          else
-            git init --quiet --initial-branch output "$out"
-          fi
-          rsync -a --delete assets/ "$out/assets/"
+          git init --quiet --initial-branch output "$out"
+          cp -R assets "$out/assets"
           cd "$out"
           git add -A
-          if git diff --cached --quiet; then
-            echo 'Nothing changed.'
-            exit 0
+          if git ls-remote --exit-code --heads "$remote" output >/dev/null; then
+            git fetch --quiet --depth 1 "$remote" output
+            if [ "$(git write-tree)" = "$(git rev-parse 'FETCH_HEAD^{tree}')" ]; then
+              echo 'Nothing changed.'
+              exit 0
+            fi
           fi
           git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
             commit --quiet -m "Redraw from GitHub data, $(date -u +%F)"
-          git push --quiet "$remote" HEAD:output
+          git push --quiet --force "$remote" HEAD:output
