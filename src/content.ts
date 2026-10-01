@@ -143,7 +143,7 @@ export const projects: Project[] = [
     summary: 'One source of truth for every coding agent I use, symlinked into Claude Code, Codex, Cursor, Cline and Antigravity.',
     highlights: [
       '14 skills, 9 rules, 43 decision records',
-      '217-check self-test, zero dependencies',
+      '217-assertion self-test, zero dependencies',
       'CI on Linux and macOS, Node 22 and 24',
     ],
     stack: ['Node.js', 'Shell', 'GitHub Actions'],
