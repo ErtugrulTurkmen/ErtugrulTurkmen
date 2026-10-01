@@ -1,17 +1,12 @@
-# Redraws the profile from live GitHub data every 6 hours and publishes the drawings to the
-# `output` branch, which README.md reads its images from. Commits come from github-actions[bot]
-# on that branch only, so main's history and the contributor list stay the owner's alone.
-#
-# Needs one secret, PROFILE_TOKEN: a fine-grained personal access token of the owner, read-only,
-# "All repositories", permissions Metadata: read and Contents: read, with an expiry date. Only the
-# fetch step can see it.
+# Redraws the profile from GitHub data and publishes the drawings to the output branch, which the
+# README reads them from. Needs the PROFILE_TOKEN secret: a fine-grained token of the owner with
+# read-only Metadata and Contents on all repositories, and an expiry date.
 name: profile
 
 on:
   schedule:
     - cron: '17 */6 * * *' # off the hour: jobs queued at :00 are the ones GitHub delays
-  # A push that changes what the README shows redraws at once, so the README never points at
-  # drawings that do not exist yet on the output branch.
+  # At once, so the README never names drawings that are not on the output branch yet.
   push:
     branches: [main]
     paths: ['src/**', 'README.md', 'projects/**', '.github/workflows/profile.yml']
@@ -30,7 +25,7 @@ jobs:
     permissions:
       contents: write # push to the output branch
     steps:
-      # Until the secret exists, skip with a warning instead of failing (and e-mailing) every 6 hours.
+      # Until the secret exists, skip with a warning rather than fail every 6 hours.
       - name: Check for the token
         id: token
         env:
@@ -55,16 +50,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PROFILE_TOKEN }}
         run: node src/fetch.ts
 
-      # README.md and projects/ carry no live data, so a rebuild that changes them means main was
-      # pushed without rebuilding, and publishing would leave images the README does not name.
+      # README.md and projects/ hold no live data: a rebuild that changes them means main was pushed unbuilt.
       - name: Draw
         if: steps.token.outputs.ok == 'true'
         run: |
           node src/build.ts
           git diff --exit-code --stat -- README.md projects/ || { echo '::error::README.md or projects/ is out of date: run npm run build and commit.'; exit 1; }
 
-      # The branch holds one commit, replaced on every change: the drawings need no history, and a
-      # commit per redraw would grow the repository by about 40 KB each time, for ever.
+      # One commit, replaced on each change: a commit per redraw would grow the repository for ever.
       - name: Publish to the output branch
         if: steps.token.outputs.ok == 'true'
         env:

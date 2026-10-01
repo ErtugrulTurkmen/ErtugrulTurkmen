@@ -1,5 +1,5 @@
-// Case-study text, one per project, keyed by Project.slug. Every claim comes from the project's
-// own repository; nothing names a client, a private host or a file path. Edit here, then `npm run build`.
+// Case studies, keyed by project slug. Every claim is backed by the project's repository, and
+// none names a client, a private host or a file path.
 
 export type CaseStudy = {
   problem: string;

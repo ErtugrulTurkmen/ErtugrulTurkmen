@@ -2,27 +2,26 @@ import { Pen, type Art, type P3 } from './iso.ts';
 import { lock, measure, round, text } from './svg.ts';
 import type { Theme } from './theme.ts';
 
-// One drawing per subject, each showing what the thing actually does. Linework plots once on
-// load; the mechanism then loops slowly, because most readers reach a card after load has ended.
-// Every animation starts from a hidden or resting state, so reduced motion shows a clean still.
+// One drawing per project, showing what it does. Linework plots once; the mechanism then loops
+// slowly, since most readers reach a card long after the page has loaded.
 
-/** `label`: the drawing's smallest label size, so a caller can tell when shrinking makes it unreadable. */
+// `label` is the smallest label size, so a caller can tell when shrinking would make it unreadable.
 export type Figure = Art & { css: string; label: number };
 
 const pct = (n: number) => `${Math.round(n * 10) / 10}%`;
 
-/** A dot that travels `path` forever from `begin` (s). Hidden until then: unplaced, it would sit at (0,0). */
+// Hidden until `begin`: before its motion starts, a dot sits at (0,0).
 const dot = (r: number, fill: string, begin: number, dur: number, path: string): string =>
   `<circle r="${r}" fill="${fill}" opacity="0"><set attributeName="opacity" to="1" begin="${begin}s"/>` +
   `<animateMotion dur="${dur}s" begin="${begin}s" repeatCount="indefinite" path="${path}"/></circle>`;
 
-/** Hero: the layers every project is built in, drawn stacked and then exploded apart. */
+/** Hero: the layers every project is built in, drawn stacked, then exploded apart. */
 export function stack(t: Theme, labels: boolean): Figure {
   const pen = new Pen(t, labels ? 0.8 : 0.72, 100, 30);
   const W = 120;
   const H = 8;
   const GAP = 60;
-  const RISE_AT = 500; // early: plotted collapsed for long, the layers read as one jumble
+  const RISE_AT = 500; // early, or the collapsed stack reads as a jumble
   const RISE = 1000;
   const layers: [string, string][] = [
     ['PLATFORM', 'Linux · Bash · Git'],
@@ -47,7 +46,7 @@ export function stack(t: Theme, labels: boolean): Figure {
       for (const [a, b] of cells) g += pen.box(14 + a * 34, 14 + b * 34, top, 20, 20, a === 1 && b === 1 ? 20 : 12, { accent: a === 1 && b === 1 });
     }
     if (i === 3) {
-      const devices: [number, number, number, number][] = [[14, 72, 36, 26], [58, 40, 50, 34], [88, 92, 14, 22]]; // x, y, width, height; 5 deep
+      const devices: [x: number, y: number, w: number, h: number][] = [[14, 72, 36, 26], [58, 40, 50, 34], [88, 92, 14, 22]];
       for (const [x, y, w, h] of devices) {
         g += pen.box(x, y, top, w, 5, h);
         g += pen.stroke(pen.d([[x + 3, y + 5, top + 3], [x + w - 3, y + 5, top + 3], [x + w - 3, y + 5, top + h - 3], [x + 3, y + 5, top + h - 3]], true), { width: 0.8, color: t.accent });
@@ -62,14 +61,13 @@ export function stack(t: Theme, labels: boolean): Figure {
       g += pen.label(lx + 24, ay + 4, name, { size: 10.5, mono: true, tracking: 1.2, fill: t.ink }, at);
       g += pen.label(lx, ay + 22, sub, { size: 12.5, fill: t.muted }, at);
     }
-    const lift = round(z * pen.s);
+    const lift = round(z * pen.scale);
     css += `.r${i}{animation:r${i} ${RISE}ms cubic-bezier(.16,1,.3,1) ${RISE_AT}ms both}@keyframes r${i}{from{transform:translateY(${lift}px)}}`;
     if (i) css += `.b${i}{animation:bob 7s ease-in-out ${RISE_AT + RISE + i * 500}ms infinite}`;
     return `<g class="r${i}"><g class="b${i}">${g}</g></g>`;
   });
   css += '@keyframes bob{50%{transform:translateY(-2.5px)}}';
 
-  // Exploded-view alignment lines, drawn once the layers have separated.
   let guides = '';
   for (let i = 0; i < layers.length - 1; i++) {
     for (const [x, y] of [[0, W], [W, 0], [W, W]] as const) {
@@ -78,7 +76,7 @@ export function stack(t: Theme, labels: boolean): Figure {
   }
   const guide = `<path d="${guides}" fill="none" stroke="${t.accent}" stroke-width=".8" stroke-dasharray="2 3" class="f" style="animation-delay:${RISE_AT + RISE}ms"/>`;
 
-  // Once the layers have separated, a request runs down the front edge and its response back up.
+  // A request runs down the front edge, and its response back up.
   const [qx, qy] = pen.p([W, W, (layers.length - 1) * GAP + H]);
   const [bx, by] = pen.p([W, W, H]);
   const begin = `${(RISE_AT + RISE) / 1000}s`;
@@ -106,13 +104,13 @@ export function truck(t: Theme, labels: boolean): Figure {
     out += pen.fill(rim, t.faces.right) + pen.stroke(rim) + pen.stroke(pen.d(pen.circle([x, y + 0.6, 10], 3.5, 'xz'), true), { width: 0.8 });
   }
   out += pen.box(-86, 104, 0, 128, 40, 5, { hatch: true });
-  const drawn = pen.delay + 600; // labels and the mechanism wait for the linework
+  const linesDrawn = pen.delay + 600;
 
   const CYCLE = 10;
-  const START = Math.max(1800, drawn);
+  const START = Math.max(1800, linesDrawn);
   let css = '';
-  // Door labels light up as their product arrives. Their fade-in and highlight share one element,
-  // so both delays live in the class rule; an inline animation-delay would override the pair.
+  // A door label's fade-in and highlight share one element, so both delays live in its class rule:
+  // an inline animation-delay would override the pair.
   const doorLabels = labels
     ? doors.map(([a, b], i) => {
         const [x, y] = pen.p([(a + b) / 2, 64, 90]);
@@ -121,9 +119,8 @@ export function truck(t: Theme, labels: boolean): Figure {
         return text(x, y, `D${i + 1}`, { size: 10.5, mono: true, anchor: 'middle', fill: t.meta, cls: `dl${i}` });
       })
     : [];
-  // Product → door. Arbitrary on purpose: the app is for exactly this kind of mapping.
-  const loads: [string, number][] = [['07', 2], ['12', 0], ['03', 3], ['21', 1]];
-  // Each box is lifted into its door's opening, clear of the frame, the wheels and the labels.
+  const loads: [product: string, door: number][] = [['07', 2], ['12', 0], ['03', 3], ['21', 1]];
+  // Boxes park in front of their door's opening, clear of its frame and the wheels.
   const boxes = loads.map(([n, door], k) => {
     const sx = -80 + k * 30;
     const [a, b] = doors[door];
@@ -132,21 +129,20 @@ export function truck(t: Theme, labels: boolean): Figure {
     const dx = round(x1 - x0);
     const dy = round(y1 - y0);
     let g = pen.box(sx, 114, 5, 18, 18, 18, { accent: true });
-    // The number is stencilled on the box's top face, so it travels inside the box's outline.
     const [lx, ly] = pen.p([sx + 9, 114 + 9, 23]);
-    if (labels) g += pen.label(lx, ly + 3.5, n, { size: 9.5, mono: true, anchor: 'middle', fill: t.accent }, drawn);
+    if (labels) g += pen.label(lx, ly + 3.5, n, { size: 9.5, mono: true, anchor: 'middle', fill: t.accent }, linesDrawn);
     const s = 12 + k * 15;
     const e = s + 11;
     css +=
       `.bx${k}{animation:bx${k} ${CYCLE}s cubic-bezier(.6,0,.3,1) ${START}ms infinite both}` +
       `@keyframes bx${k}{0%,${pct(s)}{transform:translate(0,0);opacity:1}${pct(e)},86%{transform:translate(${dx}px,${dy}px);opacity:1}` +
       `93%{transform:translate(${dx}px,${dy}px);opacity:0}94%{transform:translate(0,0);opacity:0}100%{transform:translate(0,0);opacity:1}}` +
-      `.dl${door}{animation:f .7s ease-out ${drawn}ms both,dl${door} ${CYCLE}s ${START}ms infinite}` +
+      `.dl${door}{animation:f .7s ease-out ${linesDrawn}ms both,dl${door} ${CYCLE}s ${START}ms infinite}` +
       `@keyframes dl${door}{0%,${pct(e)}{fill:${t.meta}}${pct(e + 1)},86%{fill:${t.accent}}93%,100%{fill:${t.meta}}}`;
     return `<g class="bx${k}">${g}</g>`;
   });
   const [qx, qy] = pen.p([-22, 144, 0]);
-  const dock = labels ? pen.label(qx - 10, qy + 24, 'DOCK QUEUE', { size: 9.5, mono: true, tracking: 1, fill: t.meta, anchor: 'end' }, drawn) : '';
+  const dock = labels ? pen.label(qx - 10, qy + 24, 'DOCK QUEUE', { size: 9.5, mono: true, tracking: 1, fill: t.meta, anchor: 'end' }, linesDrawn) : '';
   return { ...pen.done(out + doorLabels.join('') + boxes.join('') + dock), css, label: 9.5 };
 }
 
@@ -179,7 +175,7 @@ export function wireframe(t: Theme, labels: boolean): Figure {
       )
       .join('');
   const N = 40;
-  // Starts a little off-axis, so the still (frame 0) is a three-quarter view rather than flat.
+  // Offset by three frames, so frame 0, also the still, is a three-quarter view.
   const frames = Array.from({ length: N + 1 }, (_, i) => frame(((i + 3) / N) * Math.PI * 2));
   const win =
     `M6.5 .5H${W - 6.5}a6 6 0 0 1 6 6V${H - 6.5}a6 6 0 0 1-6 6H6.5a6 6 0 0 1-6-6V6.5a6 6 0 0 1 6-6Z` + `M.5 24H${W - 0.5}`;
@@ -191,13 +187,13 @@ export function wireframe(t: Theme, labels: boolean): Figure {
     `<ellipse cx="${cx}" cy="${cy + 56}" rx="30" ry="4" fill="${t.rule}" class="f" style="animation-delay:900ms"/>` +
     `<g class="smil"><path d="${frames[0]}" fill="none" stroke="${t.accent}" stroke-width="1.1" stroke-linejoin="round" class="f" style="animation-delay:900ms">` +
     `<animate attributeName="d" dur="24s" repeatCount="indefinite" values="${frames.join(';')}"/></path></g>` +
-    // display="none" as an attribute, so a renderer without CSS shows only the SMIL path's base pose.
+    // display as an attribute, so a renderer without CSS shows only the SMIL path.
     `<path class="still" display="none" d="${frames[0]}" fill="none" stroke="${t.accent}" stroke-width="1.1"/>` +
     (labels ? text(16, H - 14, 'PERF BUDGET · CI', { size: 9, mono: true, tracking: 1, fill: t.meta, cls: 'f', delay: 1000 }) : '');
   return { svg, w: W + 1, h: H + 1, css: '', label: 9 };
 }
 
-/** CariYonetim: the ledger filling in on screen, beside its encrypted database. It has no labels. */
+/** CariYonetim: the ledger filling in on screen, beside its encrypted database. Unlabelled. */
 export function ledger(t: Theme, _labels: boolean): Figure {
   const pen = new Pen(t, 1.15, 100, 28);
   let out = pen.box(43, -8, 0, 44, 26, 6);
@@ -265,8 +261,8 @@ export function exif(t: Theme, labels: boolean): Figure {
       `<path d="M${round(tagX + 5)} ${round(ty)}H${round(tagX + w - 5)}" stroke="${t.accent}" stroke-width="1.3" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" class="st${i}"/></g>`
     );
   });
-  // The verdict appears where the tags were, once they have dropped away. opacity="0" as an
-  // attribute too, so a renderer without CSS never shows it beside the tags it contradicts.
+  // Shown where the tags were, once they have dropped. Hidden by attribute too, so a renderer
+  // without CSS never shows it beside the tags it contradicts.
   const clean = labels
     ? text(tagX + tagsW / 2, (tagsTop + tagsBottom) / 2 + 4, '0 FIELDS · CLEAN', { size: 10, mono: true, tracking: 1, fill: t.accent, anchor: 'middle', cls: 'cl', hidden: true })
     : '';
@@ -274,7 +270,7 @@ export function exif(t: Theme, labels: boolean): Figure {
   return { ...pen.done(`<g class="f" style="animation-delay:900ms">${tags.join('')}</g>` + out + clean), css, label: 10 };
 }
 
-/** repo-zero: one rule set, symlinked into the coding agents (four drawn). */
+/** repo-zero: one rule set, symlinked into each coding agent. */
 export function symlinks(t: Theme, labels: boolean): Figure {
   const pen = new Pen(t, 0.95, 100, 30);
   const C = 80;
@@ -283,12 +279,11 @@ export function symlinks(t: Theme, labels: boolean): Figure {
     let g = pen.box(x - 24, y - 24, 0, 48, 48, 6);
     g += pen.stroke(pen.d([[x - 14, y - 14, 6], [x + 14, y - 14, 6], [x + 14, y + 14, 6], [x - 14, y + 14, 6]], true), { width: 0.8, color: t.meta });
     const [lx, ly] = pen.p([x + 24, y + 24, 0]);
-    // 12px: the drawing is wide and always shown shrunk, so the names are set large to survive it.
+    // Large, because this wide drawing is always shown shrunk.
     if (labels) g += pen.label(lx, ly + 18, name, { size: 12, mono: true, tracking: 1, fill: t.ink2, anchor: 'middle' });
     return g;
   };
-  // Plates and source are drawn first; the links fade in and the pulses run once they exist,
-  // though the links stay first in the document so they pass underneath.
+  // The links fade in after the plates are drawn, yet come first in the document to pass underneath.
   const [back, right, left, front] = agents;
   const solids = plate(back) + plate(right) + plate(left) + pen.box(C - 20, C - 20, 0, 40, 40, 40, { accent: true });
   const last = plate(front);

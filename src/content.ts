@@ -1,5 +1,4 @@
-// Everything the profile says, in one place. Edit here, then `npm run build`.
-// Facts about the projects come from the repositories themselves.
+// Everything the profile says. Edit here, then run `npm run build`.
 
 export type Status = 'live' | 'in-use' | 'developed' | 'active' | 'in-development';
 
@@ -14,14 +13,12 @@ export type Project = {
   highlights: string[];
   stack: string[];
   href: string;
-  /** Which drawing the card shows (src/art.ts), and its caption. */
   figure: 'truck' | 'wireframe' | 'ledger' | 'exif' | 'symlinks';
   caption: string;
-  /** Figures along the bottom of the wide feature card: [value, label]. */
-  metrics?: [string, string][];
+  metrics?: [value: string, label: string][];
 };
 
-export type NowItem = { label: string; text: string };
+type NowItem = { label: string; text: string };
 
 const now: NowItem[] = [
   { label: 'Shipped', text: 'TruckLister on the App Store' },
@@ -29,8 +26,7 @@ const now: NowItem[] = [
   { label: 'Learning', text: 'Rust' },
 ];
 
-/** [title, text] for the About panel's numbered column. */
-const principles: [string, string][] = [
+const principles: [title: string, text: string][] = [
   ['Security and privacy by default', "Hardened Electron shells, inputs validated at every boundary, credentials encrypted at rest, and offline-first apps that collect nothing they don't need."],
   ['Shipped, not just started', 'TruckLister went from first commit to App Store approval in 14 days, with CI rejecting anything under 100% test coverage.'],
   ['How I work', 'Layered architecture with enforced boundaries, tests and CI as the gate, exactly pinned dependencies, and every decision written down. AI coding agents work under repo-zero, the rule set I maintain myself.'],
@@ -161,7 +157,6 @@ export const skills = {
     { title: 'Testing & CI', items: ['Jest', 'Vitest', 'Playwright', 'GitHub Actions'] },
     { title: 'Tools & platforms', items: ['Git', 'Linux', 'Claude Code'] },
   ],
-  /** Full-width band under the grid: how the work is done, not what it is done with. */
   practices: {
     title: 'Security & privacy practices',
     items: ['Electron hardening', 'Input validation', 'Parameterized SQL', 'CSP & security headers', 'Secret hygiene', 'Privacy by design', 'Offline-first'],

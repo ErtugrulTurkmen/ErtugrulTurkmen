@@ -1,4 +1,4 @@
-// Renders every asset and the README from src/content.ts and data/. No network access.
+// Renders every drawing and the Markdown from src/content.ts and data/, without network access.
 
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { calendar3d } from './calendar.ts';
@@ -30,7 +30,7 @@ const [feature, ...rest] = projects;
 
 // Only Work carries a note: the others would repeat what their section already says.
 const inProduction = projects.filter((p) => p.status === 'live' || p.status === 'in-use').length;
-const sections: [string, string, string | undefined][] = [
+const sections: [slug: string, title: string, note: string | undefined][] = [
   ['about', 'About', undefined],
   ['work', 'Selected work', `${projects.length} PROJECTS · ${inProduction} IN PRODUCTION`],
   ['skills', 'Skills', undefined],
@@ -38,10 +38,8 @@ const sections: [string, string, string | undefined][] = [
   ['contact', 'Contact', undefined],
 ];
 
-// Card variants, chosen in the README by width: `-mobile` on phones, `-wide` (one per row,
-// full width) between phone and 1280px, and the plain name for the 2×2 grid. The first card of
-// each pair carries the gap below it in its stacked variants, where the pair sits one above the
-// other within a paragraph; 20px drawn, about 16px once scaled, plus the 5.5px line gap.
+// Where a pair of cards stacks inside one paragraph, the first carries the gap below it: about
+// 16px once scaled, plus the 5.5px line gap, matching the 22px between paragraphs.
 const STACK_GAP = { wide: 20, mobile: 18 };
 const CALENDAR_FIG = projects.length + 1;
 

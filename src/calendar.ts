@@ -2,12 +2,10 @@ import type { Day } from './data.ts';
 import { doc, round, sheet, text, WIDTH, type Layout } from './svg.ts';
 import type { Theme } from './theme.ts';
 
-// Isometric contribution calendar, calendar only, on drafting paper. Bar height follows each
-// day's rank among active days rather than the raw count, so ~300 contributions a year still
-// read as a skyline. Bars rise once, week by week, when the image loads. The busiest day is
-// marked and named in the legend, the one thing GitHub's own graph under the README does not say.
+// Bars are scaled by each day's rank among active days, not its count, so a few hundred
+// contributions a year still read as a skyline.
 
-const GAP = 0.08; // fraction of a tile left empty on each side
+const GAP = 0.08; // share of a tile left empty on each side
 
 function shade(hex: string, k: number): string {
   const n = parseInt(hex.slice(1), 16);
@@ -22,7 +20,6 @@ export function calendar3d(t: Theme, layout: Layout, days: Day[], fig: number, t
   const d = layout === 'desktop';
   const W = WIDTH[layout];
   const weeks = Math.max(...days.map((x) => x.week)) + 1;
-  // Desktop keeps its 12.6px half-tile; phones fit the whole year into the width.
   const A = d ? 12.6 : (W - 40) / (weeks + 7);
   const B = A / 2; // 2:1 isometric
   const k = A / 12.6;
@@ -58,7 +55,7 @@ export function calendar3d(t: Theme, layout: Layout, days: Day[], fig: number, t
     const e = project(day.week + 1 - GAP, day.weekday + GAP);
     const s = project(day.week + 1 - GAP, day.weekday + 1 - GAP); // near corner
     const w = project(day.week + GAP, day.weekday + 1 - GAP);
-    // Every day has its floor tile, so a bar grows out of the floor rather than out of a hole.
+    // Every day keeps its floor tile, so a growing bar never leaves a hole.
     let svg = `<polygon points="${points([n, e, s, w])}" fill="${t.calendar[0]}"/>`;
     if (h > 0) {
       const edge = `stroke="${t.ink}" stroke-opacity=".28" stroke-width="${d ? 0.6 : 0.4}" stroke-linejoin="round"`;
@@ -73,8 +70,7 @@ export function calendar3d(t: Theme, layout: Layout, days: Day[], fig: number, t
   // Painter's order: far tiles first, so nearer bars overlap them.
   tiles.sort((a, b) => a.depth - b.depth || a.week - b.week);
 
-  // Month ticks along the near-left edge, at the first week each month appears. A partial first
-  // month gives way to the next one rather than colliding with it. Phones label every other month.
+  // A month is labelled at its first week; a partial first month gives way to the next.
   const firsts: { week: number; month: number }[] = [];
   for (const day of days) {
     const month = Number(day.date.slice(5, 7)) - 1;
@@ -91,7 +87,6 @@ export function calendar3d(t: Theme, layout: Layout, days: Day[], fig: number, t
       return text(x - 2, y + small.size + 5, MONTHS[month], { ...small, anchor: 'end' });
     });
 
-  // The busiest day: a dot on its bar's top, named in the legend. Fades in after the bars rise.
   const peak = days.reduce((a, b) => (b.count > a.count ? b : a));
   const [px, py] = project(peak.week + 0.5, peak.weekday + 0.5);
   const dot = (cx: number, cy: number) => `<circle cx="${round(cx)}" cy="${round(cy)}" r="${d ? 2.6 : 2.2}" fill="${t.accent}" stroke="${t.paper}" stroke-width="1" class="f" style="animation-delay:${400 + weeks * 22 + 600}ms"/>`;

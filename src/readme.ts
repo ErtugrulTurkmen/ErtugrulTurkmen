@@ -2,17 +2,11 @@ import type { CaseStudy } from './cases.ts';
 import type { Profile, Project, Skills, Status } from './content.ts';
 import { esc } from './svg.ts';
 
-// Alt text carries everything each SVG says. Two ways an image gets onto the page:
-// - pic():    one <a> per theme, hidden by GitHub's CSS rule `.readme [href$="#gh-light-mode-only"]
-//             {display:none}` and its dark twin, so the theme follows the viewer's GitHub setting.
-//             Width variants are a <picture> inside with width-only media queries. prefers-color-scheme
-//             is never combined with a width: for viewers with an explicit theme, GitHub's
-//             <themed-picture> rewrites such a query to always or never match, which drops the width
-//             with it and served phone drawings to desktops (checked 2026-09-30).
-// - button(): like pic(), one <a> per theme. A mailto: link cannot carry a #gh- fragment (it can
-//             end up in the address), so that one button is a <picture> with a prefers-color-scheme
-//             source, which follows the OS until GitHub's <themed-picture> script loads; for a
-//             logged-out visitor it never does (checked 2026-10-01).
+// Each image is one link per theme, hidden by GitHub's CSS for `#gh-dark-mode-only` and
+// `#gh-light-mode-only` hrefs, so it follows the viewer's GitHub theme. Width variants are
+// <picture> sources with width-only queries: for a viewer with an explicit theme, GitHub's
+// <themed-picture> rewrites any prefers-color-scheme query and drops a width beside it. A mailto:
+// cannot carry the fragment, so the e-mail button alone uses prefers-color-scheme, and the OS theme.
 
 const STATUS_TEXT: Record<Status, string> = {
   live: 'live',
@@ -22,30 +16,19 @@ const STATUS_TEXT: Record<Status, string> = {
   'in-development': 'in development',
 };
 
-/**
- * Generated drawings live on the `output` branch, written there by the workflow as github-actions[bot].
- * Keeping them off main keeps main's history, and the repository's contributor list, to the owner alone.
- */
+// The bot commits the drawings to the output branch, so main's history and contributors stay the owner's.
 export const ASSETS = 'https://raw.githubusercontent.com/ErtugrulTurkmen/ErtugrulTurkmen/output/assets/';
 
-/**
- * Where the phone drawings are shown: wherever GitHub's README column is 520px or narrower. It is
- * the viewport minus 82px below 768px, and minus 370px from 768px to 1011px, where the profile
- * sidebar moves beside it (measured 2026-10-01). From 1280px up the column is 846px.
- */
+// Phone drawings show where GitHub's README column is 520px or narrower: below a 600px viewport,
+// and from 768px to 890px, where the profile sidebar moves beside the README.
 const PHONE = '(max-width: 600px), (min-width: 768px) and (max-width: 890px)';
-/** Below a full 846px column, two half-width cards no longer fit side by side. */
-// Phone drawings keep their 320px where the column is wider (up to 520px): images only shrink to
-// fit, never grow, so every image paragraph is centred to keep that narrower strip in the middle.
+// Below 1280px the column is narrower than 846px, too narrow for two cards side by side.
 const NOT_FULL = '(max-width: 1279px)';
 
 const src = (name: string, mode: 'dark' | 'light', variant = '') => `${ASSETS}${name}${variant}-${mode}.svg`;
 
-/**
- * `mobile`: the asset has a phone variant. `wide`: a card with a full-width variant for columns
- * too narrow for the 2×2 grid. `href`: where a click goes; none by default.
- */
-export function pic(name: string, alt: string, { mobile = false, wide = false, href = '' } = {}): string {
+/** `mobile`: has a phone variant. `wide`: has a full-width variant for columns too narrow for two cards. */
+function pic(name: string, alt: string, { mobile = false, wide = false, href = '' } = {}): string {
   return (['dark', 'light'] as const)
     .map((mode) => {
       const img = `<img alt="${esc(alt)}" src="${src(name, mode)}">`;
@@ -63,8 +46,7 @@ const button = (href: string, name: string, alt: string): string =>
     ? `<a href="${esc(href)}"><picture><source media="(prefers-color-scheme: light)" srcset="${src(name, 'light')}"><img alt="${esc(alt)}" src="${src(name, 'dark')}"></picture></a>`
     : pic(name, alt, { href });
 
-// README.md on main changes only when its owner rebuilds it, while the drawings refresh every
-// 6 hours, so alt text carries no live numbers that would go stale between the two.
+// Alt text holds no live numbers: README.md changes only on a rebuild, the drawings every 6 hours.
 export const heroAlt = (p: Profile): string =>
   `${p.name}. ${p.eyebrow}. ${p.tagline} Focus: ${p.focus.join(', ')}. ` +
   `${p.now.map((n) => `${n.label}: ${n.text}`).join('. ')}. ` +
@@ -85,16 +67,17 @@ export const titleAlt = (p: Profile): string =>
   `Drawn by ${p.name}. Checked by GitHub Actions every 6 hours, with the date of the last revision. ` +
   'Numbers and drawings are regenerated from live GitHub data; private work is counted, never named.';
 
-// Images that share a paragraph share one line: GitHub's renderers disagree on whether a newline
-// inside a paragraph is a space or a <br>.
+// Images in one paragraph share one line, since GitHub's renderers disagree on whether a newline
+// there is a space or a <br>. Paragraphs are centred: a 320px phone drawing never grows to fill a
+// wider column.
 export function readme(p: Profile, projects: Project[], skills: Skills): string {
   const [feature, ...rest] = projects;
   const rows: string[] = [];
   for (let i = 0; i < rest.length; i += 2) {
-    // No whitespace between the pair: its gutter is drawn inside the two images.
+    // No space between the pair: its gutter is drawn inside the two images.
     rows.push(rest.slice(i, i + 2).map((pr) => pic(`card-${pr.slug}`, cardAlt(pr), { mobile: true, wide: true, href: pr.href })).join(''));
   }
-  return `<!-- Generated by src/build.ts from src/content.ts and data/. Edit those, then run: npm run build -->
+  return `<!-- Generated by src/build.ts from src/content.ts. Edit that, then run: npm run build -->
 
 <p align="center">${pic('hero', heroAlt(p), { mobile: true })}</p>
 
@@ -134,10 +117,9 @@ const SOURCE_NOTE: Record<Project['visibility'], string> = {
   public: 'the source is public.',
 };
 
-/** A project's case-study page, projects/<slug>.md. */
 export function caseStudy(pr: Project, n: number, c: CaseStudy): string {
   const links = c.links?.map(([label, href]) => `[${label}](${href})`).join(' · ');
-  return `<!-- Generated by src/build.ts from src/cases.ts. Edit that, then run: npm run build -->
+  return `<!-- Generated by src/build.ts from src/cases.ts and src/content.ts. Edit those, then run: npm run build -->
 
 <p align="center">${pic(`case-${pr.slug}`, `${pr.name}: ${pr.caption}. ${pr.kind}. Stack: ${pr.stack.join(', ')}.`, { mobile: true })}</p>
 

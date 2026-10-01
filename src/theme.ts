@@ -1,27 +1,25 @@
-// palette: kami (vendored design system) — parchment, ivory, warm sand, the four warm text
-// levels and ink blue are taken whole from its tokens.css. kami has no dark text ramp, so the
-// dark theme mirrors it onto kami's own Deep Dark / Dark Surface; values marked "derived" were
-// mixed from kami colours. Every text colour is ≥ 4.5:1 on its panel.
-
-export type Faces = { top: string; left: string; right: string };
+// The kami palette. Values marked "derived" are mixed from kami colours, since kami has no dark
+// theme. Every text colour is at least 4.5:1 on its panel.
 
 export type Theme = {
   mode: 'dark' | 'light';
-  paper: string; // drawing ground: hero and card figures
-  panel: string; // card body
-  rule: string; // hairlines, major grid
-  grid: string; // minor grid
-  ink: string; // lines and primary text
+  paper: string;
+  panel: string;
+  rule: string;
+  grid: string;
+  ink: string;
   ink2: string;
   muted: string;
   meta: string;
-  accent: string; // the one chromatic colour: numbers, moving parts, links
-  tag: string; // solid tag fill (kami forbids rgba tags)
+  accent: string;
+  tag: string;
   tagText: string;
-  faces: Faces; // isometric solids
-  accentFaces: Faces; // the part of a drawing that moves
-  calendar: readonly [string, string, string, string, string]; // empty → busiest
+  faces: Faces;
+  accentFaces: Faces;
+  calendar: readonly [string, string, string, string, string]; // empty to busiest
 };
+
+type Faces = { top: string; left: string; right: string };
 
 export const light: Theme = {
   mode: 'light',
@@ -51,17 +49,16 @@ export const dark: Theme = {
   ink2: '#e8e6dc', // kami warm sand
   muted: '#b5b2a6', // derived, 8.6:1
   meta: '#96938a', // derived, 5.9:1
-  accent: '#8fb0d8', // derived: kami ink light lifted to 8:1 for text on dark
+  accent: '#8fb0d8', // derived: kami ink light lifted to 8:1
   tag: '#18283f', // derived: ink blue 60% over deep dark
   tagText: '#c9d8ec',
   faces: { top: '#282826', left: '#1f1f1d', right: '#171716' },
   accentFaces: { top: '#223a5a', left: '#1b2f4a', right: '#15253b' }, // derived from ink blue
-  calendar: ['#252523', '#26426a', '#2d5a8a', '#5b83b3', '#8fb0d8'], // level 1 lifted off the floor (1.2:1 → 1.5:1)
+  calendar: ['#252523', '#26426a', '#2d5a8a', '#5b83b3', '#8fb0d8'], // derived from ink blue; level 1 is 1.5:1 on the floor
 };
 
 export const themes = [dark, light] as const;
 
-// kami sets everything in serif; labels are mono, as on a drawing's title block. Cambria comes
-// before Sitka (wider) and Georgia (old-style figures that make numbers bounce).
+// Cambria before Sitka, which runs wider, and Georgia, whose old-style figures make numbers bounce.
 export const SERIF = `Charter, 'Bitstream Charter', 'Iowan Old Style', Cambria, 'Sitka Text', Georgia, serif`;
 export const MONO = `ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace`;

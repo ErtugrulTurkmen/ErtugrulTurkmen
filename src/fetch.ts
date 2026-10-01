@@ -1,9 +1,5 @@
-// Pulls the numbers the README shows and writes them to data/.
-// Needs GITHUB_TOKEN: a read-only token of the profile owner, so private repositories
-// count toward the totals. Repository names are used in memory only and never written.
-//
-// Actions logs of a public repository are public, so nothing this script prints may carry a
-// repository name or a response body: only LoggedError messages, written here, reach the log.
+// Writes the README's numbers to data/, using GITHUB_TOKEN, the owner's read-only token. The Actions
+// log is public, so only LoggedError messages reach it: never a repository name or a response body.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dataFile, type Day, type Stats } from './data.ts';
@@ -42,8 +38,7 @@ async function get(url: string, { allowEmptyRepo = false } = {}): Promise<Respon
 
 const linkTo = (res: Response, rel: string) => res.headers.get('link')?.match(new RegExp(`<([^>]+)>; rel="${rel}"`))?.[1];
 
-/** Every page of a list endpoint, following rel="next". */
-async function all<T>(url: string): Promise<T[]> {
+async function allPages<T>(url: string): Promise<T[]> {
   const items: T[] = [];
   for (let next: string | undefined = url; next; ) {
     const res = await get(next);
@@ -61,9 +56,8 @@ async function graphql<T>(query: string, variables: Record<string, unknown>): Pr
   return out.data;
 }
 
-// Counted per repository rather than through commit search, which is not documented to see
-// private repositories with a fine-grained token. With one commit per page, the "last" page
-// number in the Link header is the count.
+// Per repository, since commit search is not documented to see private ones with a fine-grained
+// token. At one commit per page, the last page number is the count.
 async function commitCount(repo: string): Promise<number> {
   const res = await get(`https://api.github.com/repos/${repo}/commits?author=${LOGIN}&per_page=1`, { allowEmptyRepo: true });
   if (res.status === 409) return 0; // empty repository
@@ -94,9 +88,9 @@ async function main() {
   );
 
   type Repo = { full_name: string; private: boolean; fork: boolean };
-  const repos = (await all<Repo>('https://api.github.com/user/repos?affiliation=owner&per_page=100')).filter((r) => !r.fork);
+  const repos = (await allPages<Repo>('https://api.github.com/user/repos?affiliation=owner&per_page=100')).filter((r) => !r.fork);
 
-  // An empty answer is a failed fetch, not an empty profile: stop before it is drawn over the last good one.
+  // An empty answer is a failed fetch: stop rather than draw over the last good data.
   if (days.length === 0 || repos.length === 0) throw new LoggedError(`empty data: ${days.length} days, ${repos.length} repositories`);
 
   const bytes = new Map<string, number>();
@@ -110,7 +104,7 @@ async function main() {
   for (const r of repos) commitsAllTime += await commitCount(r.full_name);
 
   const stats: Stats = {
-    fetchedAt: new Date().toISOString().slice(0, 10), // the date alone, so a run that finds nothing new changes nothing
+    fetchedAt: new Date().toISOString().slice(0, 10), // the date alone, so an unchanged run changes nothing
     contributionsLastYear: cal.totalContributions,
     commitsAllTime,
     repos: {
@@ -130,7 +124,7 @@ async function main() {
 }
 
 await main().catch((e: unknown) => {
-  // Anything not written here (a network or runtime error) is reduced to its name and code.
+  // Errors not written here are reduced to their name and code.
   const detail = e instanceof LoggedError ? e.message : `${(e as Error)?.name ?? 'Error'} ${(e as { cause?: { code?: string } })?.cause?.code ?? ''}`.trim();
   console.error(`fetch failed: ${detail}`);
   process.exitCode = 1;

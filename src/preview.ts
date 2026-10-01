@@ -1,11 +1,6 @@
-// Local preview: renders README.md through GitHub's own Markdown API (same sanitiser as the
-// profile page), then resolves every <picture> to one variant so each page shows exactly one
-// theme and layout. Writes preview/{desktop,mobile}-{dark,light}.html, plus preview/live.html,
-// which keeps the <picture> elements and sizes its column the way GitHub's profile page does,
-// for checking the breakpoints by resizing the window, and preview/check.html, the layout check.
-//
-// The pages point at preview/motion/, copies of assets/ without the reduced-motion rule, so the
-// animation is visible even on a machine with "Reduce motion" switched on. The real assets keep it.
+// Local previews through GitHub's Markdown API: one page per theme and layout, live.html with
+// GitHub's column widths, and check.html, a text layout check. They use preview/motion/, copies of
+// the drawings without the reduced-motion rule, so they animate on any machine.
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -23,9 +18,8 @@ for (const f of readdirSync(ASSETS)) {
   if (f.endsWith('.svg')) writeFileSync(new URL(f, MOTION), readFileSync(new URL(f, ASSETS), 'utf8').replace(REDUCED_MOTION, ''));
 }
 
-// gfm mode with the repository as context: what the live profile uses (its paragraphs carry
-// dir="auto", and images are not wrapped in links). The API's default "markdown" mode wraps each
-// image in a link, pulling it out of any <picture> inside an <a>, which the live page never does.
+// gfm mode renders as the live profile does. The default mode wraps each image in a link, which
+// pulls it out of its <picture>.
 const render = (file: string) =>
   execFileSync('gh', ['api', 'markdown', '-f', 'mode=gfm', '-f', 'context=ErtugrulTurkmen/ErtugrulTurkmen', '-F', `text=@${file}`], { cwd: ROOT, encoding: 'utf8' });
 
@@ -33,7 +27,7 @@ function resolve(html: string, mode: 'dark' | 'light', mobile: boolean): string 
   return html
     .replaceAll(`src="${REMOTE}`, 'src="assets/')
     .replaceAll(`srcset="${REMOTE}`, 'srcset="assets/')
-    // Both theme links are resolved to this page's theme; the CSS below hides the other link anyway.
+    // Both theme links get this page's theme; the CSS below hides the other one.
     .replace(/<picture>[\s\S]*?<img([^>]*?)src="assets\/([^"]+)-(?:dark|light)\.svg"([^>]*)>[\s\S]*?<\/picture>/g, (_, pre, name, post) => {
       const phone = `${name}-mobile-${mode}.svg`;
       const file = mobile && existsSync(new URL(phone, ASSETS)) ? phone : `${name}-${mode}.svg`;
@@ -63,9 +57,8 @@ for (const [file, prefix] of pages) {
   }
   }
 }
-// GitHub's README column on a profile page (measured 2026-10-01): viewport − 82px below 768px,
-// − 370px up to 1011px, − 434px from 1012px, at most 846px. Themes follow the OS, as for a
-// logged-out visitor, through the same href rule GitHub ships.
+// GitHub's README column on a profile page: the viewport less 82px below 768px, less 370px up to
+// 1011px, less 434px from 1012px, at most 846px. Themes follow the OS, as for a logged-out visitor.
 const live = render('README.md').replaceAll(`src="${REMOTE}`, 'src="motion/').replaceAll(`srcset="${REMOTE}`, 'srcset="motion/');
 writeFileSync(
   new URL('live.html', OUT),
@@ -80,9 +73,8 @@ writeFileSync(
 @media (prefers-color-scheme:light){.markdown-body [href$="#gh-dark-mode-only"]{display:none}}</style></head>
 <body><article class="markdown-body">${live}</article></body></html>`,
 );
-// The layout check: renders every asset inline and lists text that leaves its drawing or collides
-// with other text, at rest. Open preview/check.html and run check(), or check("'PT Serif Caption'")
-// to stand in for the wider fallback faces (Sitka, Noto Serif, DejaVu Serif).
+// Lists text that leaves its drawing or collides with other text. Run check() in the console, or
+// check("'PT Serif Caption'") to stand in for the wider fallback faces.
 const assets = readdirSync(ASSETS).filter((f) => f.endsWith('.svg'));
 writeFileSync(
   new URL('check.html', OUT),
@@ -97,7 +89,7 @@ async function check(font) {
     const svg = document.importNode(parsed.documentElement, true);
     root.replaceChildren(svg);
     if (font) { const st = document.createElementNS('http://www.w3.org/2000/svg', 'style'); st.textContent = 'text:not(.m){font-family:' + font + '!important}'; svg.append(st); }
-    // Measuring forces layout synchronously; no frame wait, which would stall in a hidden tab.
+    // No frame wait: it would stall in a hidden tab, and measuring forces layout anyway.
     for (const a of document.getAnimations()) { a.pause(); a.currentTime = 60000; }
     const W = +svg.getAttribute('width'), H = +svg.getAttribute('height'), base = svg.getBoundingClientRect();
     const shown = (t) => { for (let e = t; e && e !== svg; e = e.parentElement) { const c = getComputedStyle(e); if (c.display === 'none' || +c.opacity === 0) return false; } return true; };
@@ -106,8 +98,7 @@ async function check(font) {
     for (const b of boxes) if (b.x0 < 0.5 || b.x1 > W - 0.5 || b.y0 < 0 || b.y1 > H + 1) issues.push('OUT ' + JSON.stringify(b.s));
     for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
       const a = boxes[i], b = boxes[j];
-      // Lines of one paragraph: their boxes span the font's whole ascent and descent, which overlap at
-      // normal leading without the glyphs touching.
+      // A paragraph's own lines: their boxes overlap at normal leading, their glyphs do not.
       if (a.x === b.x && a.size === b.size && Math.abs(a.y - b.y) >= a.size * 1.1) continue;
       if (Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) > 1.5 && Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) > 3.5) issues.push('HIT ' + JSON.stringify(a.s) + ' x ' + JSON.stringify(b.s));
     }

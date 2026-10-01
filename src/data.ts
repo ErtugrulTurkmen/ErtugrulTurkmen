@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 
-// Everything src/fetch.ts writes and src/build.ts reads. Aggregates only: no repository
-// names, descriptions or commit messages ever reach data/, so none can reach the README.
+// What fetch.ts writes and build.ts reads: aggregates only. No repository name, description or
+// commit message ever reaches data/, so none can reach the README.
 
 export type Day = { date: string; week: number; weekday: number; count: number };
 

@@ -5,9 +5,6 @@ import { place } from './iso.ts';
 import { doc, lock, measure, round, sheet, tag, text, WIDTH, wrap, type Font, type Layout } from './svg.ts';
 import type { Theme } from './theme.ts';
 
-// Everything sits on kami's panels; figures sit on drafting paper. Labels are mono caps, as on a
-// drawing's title block, and the one accent (ink blue) marks numbers and moving parts.
-
 const STATUS: Record<Status, string> = {
   live: 'LIVE ON APP STORE',
   'in-use': 'IN USE',
@@ -22,13 +19,11 @@ const UP = '@keyframes up{from{opacity:0;transform:translateY(6px)}}.up{animatio
 
 const LABEL: Font = { size: 10.5, mono: true, tracking: 1 };
 
-/**
- * Room for a serif line. Phone drawings keep only 20px beside their text, so their lines wrap 6%
- * short of it, enough for the widest fallback faces (DejaVu Serif, Sitka); desktop panels have more.
- */
+// Phone text wraps 6% short: those drawings keep only 20px beside it, and the widest fallback
+// faces (DejaVu Serif, Sitka) need the room.
 const fit = (d: boolean, w: number): number => (d ? w : w * 0.94);
 
-/** Phone drawings render at 0.87–1.6×, so no label there is set below 11px. */
+// No label under 11px on phone drawings, which render at 0.87–1.6×.
 const lab = (d: boolean, size = LABEL.size): Font => ({ ...LABEL, size: d ? size : Math.max(size, 11) });
 
 const panel = (t: Theme, w: number, h: number, x = 0): string =>
@@ -36,8 +31,7 @@ const panel = (t: Theme, w: number, h: number, x = 0): string =>
 
 const rule = (t: Theme, x: number, y: number, w: number): string => `<rect x="${x}" y="${round(y)}" width="${round(w)}" height="1" fill="${t.rule}"/>`;
 
-/** A row of figures: large serif number, mono caption, hairlines between cells. */
-function figures(t: Theme, x: number, y: number, w: number, cols: number, items: [string, string][], size: number, delay: number, small: Font): { svg: string; h: number } {
+function metricRow(t: Theme, x: number, y: number, w: number, cols: number, items: [string, string][], size: number, delay: number, small: Font): { svg: string; h: number } {
   const colW = w / cols;
   const labels = items.map(([, label], i) => wrap(label.toUpperCase(), colW - (i % cols ? 32 : 14), small));
   const rowH = (r: number) => size + 36 + Math.max(...labels.slice(r * cols, r * cols + cols).map((l) => l.length)) * 14;
@@ -60,11 +54,8 @@ function figures(t: Theme, x: number, y: number, w: number, cols: number, items:
   return { svg: out.join(''), h: top - y };
 }
 
-/** A small north-east arrow: the card is a link. */
-const arrow = (x: number, y: number, color: string): string =>
+const linkArrow = (x: number, y: number, color: string): string =>
   `<path d="M${round(x)} ${round(y)}l7-7M${round(x + 1.5)} ${round(y - 7)}h5.5v5.5" fill="none" stroke="${color}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`;
-
-// ─── Hero ───────────────────────────────────────────────────────────────────
 
 export function hero(t: Theme, layout: Layout, p: Profile, s: Stats, title: string): string {
   const d = layout === 'desktop';
@@ -83,7 +74,7 @@ export function hero(t: Theme, layout: Layout, p: Profile, s: Stats, title: stri
 
   y += d ? 64 : 48;
   const nameFont: Font = { size: d ? 52 : 32, weight: 500, tracking: d ? -1.2 : -0.6 };
-  // 1.15 leading: the ğ of one line and the Ü of the next need the room.
+  // 1.15 leading: a ğ above a Ü needs the room.
   const nameLH = d ? 60 : 37;
   const nameLines = wrap(p.name, fit(d, leftW), nameFont);
   nameLines.forEach((line, i) => out.push(text(pad, y + i * nameLH, line, { ...nameFont, cls: 'up', delay: 80 })));
@@ -96,7 +87,7 @@ export function hero(t: Theme, layout: Layout, p: Profile, s: Stats, title: stri
   tagline.forEach((line, i) => out.push(text(pad, y + i * lh, line, { ...tagFont, fill: t.muted, cls: 'up', delay: 140 })));
   y += (tagline.length - 1) * lh + 30;
 
-  // Focus areas as a slashed line of caps. A slash only ever sits between two items on one line.
+  // A slash only ever sits between two items on the same line.
   let fx = pad;
   const focus: string[] = [];
   p.focus.forEach((f, i) => {
@@ -127,7 +118,6 @@ export function hero(t: Theme, layout: Layout, p: Profile, s: Stats, title: stri
     y += h;
   }
 
-  // Now rows: label and text side by side on desktop; on phones the label sits above its text.
   y += d ? 42 : 30;
   const nowFont: Font = { size: d ? 15.5 : 15 };
   const textX = d ? pad + 96 : pad;
@@ -146,7 +136,7 @@ export function hero(t: Theme, layout: Layout, p: Profile, s: Stats, title: stri
   y = Math.max(y, artBottom) + (d ? 14 : 4);
   out.push(rule(t, pad, y, W - pad * 2));
   const lang = s.languages[0];
-  const row = figures(
+  const row = metricRow(
     t, pad, y, W - pad * 2, d ? 4 : 2,
     [
       [`${s.contributionsLastYear}`, 'contributions, last 12 months'],
@@ -167,18 +157,14 @@ export function hero(t: Theme, layout: Layout, p: Profile, s: Stats, title: stri
   return doc(W, H, t, title, sheet(t, 0, 0, W, H, 6) + out.join(''), '', UP + art.css);
 }
 
-// ─── Project cards ──────────────────────────────────────────────────────────
-
-/** Name (with an arrow, since every card links), kind, summary and numbered highlights. */
 function cardText(t: Theme, pr: Project, x: number, y0: number, w: number, big: boolean, d: boolean): { svg: string; y: number } {
   const out: string[] = [];
   let y = y0;
   const nameFont: Font = { size: big ? 26 : 21, weight: 500, tracking: -0.3 };
   out.push(text(x, y, pr.name, nameFont));
   const nameEnd = x + measure(pr.name, nameFont) + 10;
-  out.push(arrow(nameEnd, y - 4, t.accent));
-  // On phones the status tag moves here from the figure's corner, where the caption needs the room:
-  // beside the name when both fit, else on a line of its own under it.
+  out.push(linkArrow(nameEnd, y - 4, t.accent));
+  // On phones the status tag sits by the name, since the figure's caption needs its corner.
   if (!d) {
     const status = tag(t, 0, 0, STATUS[pr.status], 'end', 11);
     const beside = nameEnd + 17 + status.w <= x + w;
@@ -209,18 +195,15 @@ function cardText(t: Theme, pr: Project, x: number, y0: number, w: number, big: 
 const VISIBILITY = { private: 'PRIVATE SOURCE', 'soon-public': 'OPEN SOURCE SOON', public: 'OPEN SOURCE' } as const;
 const STACK_FONT: Font = { size: 11.5, mono: true };
 
-/** Footer height: one line when stack and visibility fit side by side, else two. */
 const footerH = (pr: Project, w: number, d: boolean): number =>
   measure(pr.stack.join(' · '), STACK_FONT) + 32 + measure(VISIBILITY[pr.visibility], lab(d, 9.5)) <= w ? 42 : 62;
 
-/** Stack and source visibility under a hairline: side by side, or stacked when the card is narrow. */
 function footer(t: Theme, pr: Project, x: number, right: number, H: number, d: boolean): string {
   const small = lab(d, 9.5);
   const label = VISIBILITY[pr.visibility];
   const two = footerH(pr, right - x, d) > 42;
   const y = H - 19;
   const locked = pr.visibility === 'private';
-  // One line: visibility right-aligned. Two lines: visibility under the stack, from the left.
   const lockX = two ? x : right - measure(label, small) - 16;
   return (
     rule(t, x, H - (two ? 62 : 42), right - x) +
@@ -230,7 +213,6 @@ function footer(t: Theme, pr: Project, x: number, right: number, H: number, d: b
   );
 }
 
-/** The figure box: drafting paper, caption, status tag, and the drawing. `css` animates the drawing. */
 function figureBox(t: Theme, pr: Project, n: number, x: number, y: number, w: number, h: number, d: boolean): { svg: string; css: string } {
   const art = figureFor(t, pr, w - 20, h - 42, 1, d);
   return {
@@ -243,19 +225,14 @@ function figureBox(t: Theme, pr: Project, n: number, x: number, y: number, w: nu
   };
 }
 
-/**
- * A project's drawing for a box of w × h. Its labels are dropped when the smallest would render
- * below 7.5px (phone drawings show at 0.87× on a 278px column), where they read as noise rather
- * than text; the mechanism carries the meaning.
- */
+// Drops a drawing's labels where they would render under 7.5px; its mechanism still reads without them.
 function figureFor(t: Theme, pr: Project, w: number, h: number, grow: number, d: boolean): Figure {
   const art = FIGURES[pr.figure](t, true);
   const k = Math.min(grow, w / art.w, h / art.h);
   return art.label * k * (d ? 1 : 0.87) >= 7.5 ? art : FIGURES[pr.figure](t, false);
 }
 
-/** Half-width card on desktop, where two sit side by side with a 22px gutter split between them. */
-export const HALF = 412;
+const HALF = 412;
 const GUTTER = 11;
 const FIG_H = 240;
 
@@ -263,7 +240,6 @@ type CardOptions = { layout: Layout; side?: 'left' | 'right'; H?: number; padBot
 
 const cardWidth = (layout: Layout) => (layout === 'desktop' ? HALF : WIDTH.mobile);
 
-/** Height a card needs, so a row of cards can share the tallest. */
 export function cardHeight(t: Theme, pr: Project, layout: Layout): number {
   const W = cardWidth(layout);
   const d = layout === 'desktop';
@@ -274,8 +250,8 @@ export function projectCard(t: Theme, pr: Project, n: number, title: string, o: 
   const d = o.layout === 'desktop';
   const W = cardWidth(o.layout);
   const H = o.H ?? cardHeight(t, pr, o.layout);
-  // Desktop pairs: the gutter is transparent space inside each image, so two cards fill the 846px
-  // column exactly. Stacked cards get their gap as transparent space below the first one.
+  // In a desktop pair the 22px gutter is transparent space inside the two images, so they fill the
+  // 846px column exactly.
   const x0 = o.side === 'right' ? GUTTER : 0;
   const fullW = W + (d && o.side ? GUTTER : 0);
   const fig = figureBox(t, pr, n, x0 + 10, 10, W - 20, FIG_H, d);
@@ -283,20 +259,17 @@ export function projectCard(t: Theme, pr: Project, n: number, title: string, o: 
   return doc(fullW, H + (o.padBottom ?? 0), t, title, panel(t, W, H, x0) + body, '', fig.css);
 }
 
-/** Full width: text left, a large figure right, and the metrics (if any) along the bottom. */
 export function wideCard(t: Theme, pr: Project, n: number, title: string, padBottom = 0): string {
   const W = WIDTH.desktop;
   const split = 404;
   const left = cardText(t, pr, 28, 58, split - 56, true, true);
   const figH = Math.max(left.y + 4, 300);
-  const metrics = pr.metrics?.length ? figures(t, 28, figH + 22, W - 56, 4, pr.metrics, 26, 300, { ...LABEL, size: 9.5 }) : null;
+  const metrics = pr.metrics?.length ? metricRow(t, 28, figH + 22, W - 56, 4, pr.metrics, 26, 300, { ...LABEL, size: 9.5 }) : null;
   const H = figH + (metrics ? 22 + metrics.h + 44 : 64);
   const fig = figureBox(t, pr, n, split, 10, W - split - 10, figH, true);
   const body = fig.svg + left.svg + (metrics ? rule(t, 28, figH + 22, W - 56) + metrics.svg : '') + footer(t, pr, 28, W - 28, H, true);
   return doc(W, H + padBottom, t, title, panel(t, W, H) + body, '', UP + fig.css);
 }
-
-// ─── Skills ─────────────────────────────────────────────────────────────────
 
 export function skillsPanel(t: Theme, layout: Layout, skills: Skills, title: string): string {
   const d = layout === 'desktop';
@@ -343,9 +316,6 @@ export function skillsPanel(t: Theme, layout: Layout, skills: Skills, title: str
   return doc(W, H, t, title, panel(t, W, H) + out.join(''));
 }
 
-// ─── Section headers, About, title block ────────────────────────────────────
-
-/** Replaces GitHub's sans-serif h2: number with kami's short ink-blue rule, serif title, mono note. */
 export function sectionHeader(t: Theme, layout: Layout, n: number, title: string, meta?: string): string {
   const d = layout === 'desktop';
   const W = WIDTH[layout];
@@ -369,8 +339,6 @@ export function aboutPanel(t: Theme, layout: Layout, p: Profile, title: string):
   const W = WIDTH[layout];
   const pad = d ? 32 : 20;
   const out: string[] = [text(pad, 44, 'ABSTRACT', { ...lab(d), fill: t.meta })];
-  // The lede introduces him across the full width; on desktop the bio and the principles then
-  // share two columns under a hairline.
   const ledeFont: Font = { size: d ? 22 : 18, weight: 500 };
   let y = d ? 84 : 76;
   for (const line of wrap(p.about.lede, fit(d, W - pad * 2), ledeFont)) {
@@ -415,10 +383,9 @@ export function aboutPanel(t: Theme, layout: Layout, p: Profile, title: string):
   return doc(W, H, t, title, panel(t, W, H) + columnRule + out.join(''));
 }
 
-/** Label/value cells in rows, values wrapped to their column. Shared by the title block and case headers. */
 function cells(t: Theme, d: boolean, W: number, items: [string, string][], widths: number[], cols: number, top: number, closingRule: boolean): { svg: string; y: number } {
   const vFont: Font = { size: 15 };
-  // Lists break at their separators first; a piece too long for the cell then breaks between words.
+  // Lists break at their separators first, then between words where a piece is too long.
   const values = items.map(([, value], i) => wrap(value, fit(d, widths[i] * W - 30), vFont, ' · ').flatMap((line) => wrap(line, fit(d, widths[i] * W - 30), vFont)));
   const out: string[] = [];
   let y = top;
@@ -438,7 +405,6 @@ function cells(t: Theme, d: boolean, W: number, items: [string, string][], width
   return { svg: out.join(''), y };
 }
 
-/** The drawing's title block, closing the page. Its revision date moves with every sync. */
 export function titleBlock(t: Theme, layout: Layout, p: Profile, s: Stats, sheets: number, title: string): string {
   const d = layout === 'desktop';
   const W = WIDTH[layout];
@@ -458,7 +424,6 @@ export function titleBlock(t: Theme, layout: Layout, p: Profile, s: Stats, sheet
   return doc(W, H, t, title, panel(t, W, H) + out.join(''));
 }
 
-/** Case-study page header: the project's drawing at full size above a title block. */
 export function caseHeader(t: Theme, layout: Layout, pr: Project, n: number, title: string): string {
   const d = layout === 'desktop';
   const W = WIDTH[layout];
@@ -473,7 +438,6 @@ export function caseHeader(t: Theme, layout: Layout, pr: Project, n: number, tit
   ];
   const top = 44 + figH + 18;
   const grid = cells(t, d, W, items, d ? [0.2, 0.34, 0.18, 0.28] : [0.5, 0.5, 0.5, 0.5], d ? 4 : 2, top, false);
-  // The sheet label drops the project name when it would run into the status tag.
   const status = tag(t, W - 12, 12, STATUS[pr.status], 'end', d ? 10.5 : 11);
   const sheetNo = `SHEET ${String(n + 1).padStart(2, '0')}`;
   const full = `${sheetNo} — ${pr.name.toUpperCase()}`;
@@ -488,16 +452,13 @@ export function caseHeader(t: Theme, layout: Layout, pr: Project, n: number, tit
   return doc(W, H, t, title, sheet(t, 0, 0, W, H, 6) + body.join(''), '', art.css);
 }
 
-// ─── Buttons ────────────────────────────────────────────────────────────────
-
-// kami's ink-blue call to action and its warm-sand secondary, in each theme. 48px tall, so the
-// target clears the 44pt and 48dp touch minimums at the 1:1 size buttons keep on phones.
+// 48px tall: buttons keep their size on phones, where touch targets need 44pt or 48dp.
 export function button(t: Theme, kind: 'primary' | 'secondary', label: string, title: string): string {
   const H = 48;
   const font: Font = { size: 11.5, mono: true, tracking: 1.2 };
   const W = Math.round(22 + measure(label, font) + 14 + 10 + 22);
   const fill = kind === 'primary' ? t.accent : t.rule;
-  const edge = kind === 'primary' ? t.accent : t.mode === 'dark' ? '#45443f' : t.faces.right; // derived: dark surface lifted to show an edge on GitHub's canvas
+  const edge = kind === 'primary' ? t.accent : t.mode === 'dark' ? '#45443f' : t.faces.right; // derived: dark surface, lifted to show on GitHub's canvas
   const color = kind === 'primary' ? t.panel : t.ink;
   const body =
     `<rect x=".5" y=".5" width="${W - 1}" height="${H - 1}" rx="6" fill="${fill}" stroke="${edge}"/>` +
