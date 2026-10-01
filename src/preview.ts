@@ -2,7 +2,7 @@
 // profile page), then resolves every <picture> to one variant so each page shows exactly one
 // theme and layout. Writes preview/{desktop,mobile}-{dark,light}.html, plus preview/live.html,
 // which keeps the <picture> elements and sizes its column the way GitHub's profile page does,
-// for checking the breakpoints by resizing the window.
+// for checking the breakpoints by resizing the window, and preview/check.html, the layout check.
 //
 // The pages point at preview/motion/, copies of assets/ without the reduced-motion rule, so the
 // animation is visible even on a machine with "Reduce motion" switched on. The real assets keep it.
@@ -80,4 +80,39 @@ writeFileSync(
 @media (prefers-color-scheme:light){.markdown-body [href$="#gh-dark-mode-only"]{display:none}}</style></head>
 <body><article class="markdown-body">${live}</article></body></html>`,
 );
-console.log('wrote preview/*.html, preview/live.html and preview/motion/');
+// The layout check: renders every asset inline and lists text that leaves its drawing or collides
+// with other text, at rest. Open preview/check.html and run check(), or check("'PT Serif Caption'")
+// to stand in for the wider fallback faces (Sitka, Noto Serif, DejaVu Serif).
+const assets = readdirSync(ASSETS).filter((f) => f.endsWith('.svg'));
+writeFileSync(
+  new URL('check.html', OUT),
+  `<!doctype html><meta charset="utf-8"><title>Layout check</title><div id="root"></div>
+<script>
+const FILES = ${JSON.stringify(assets)};
+async function check(font) {
+  const root = document.getElementById('root');
+  const report = [];
+  for (const f of FILES) {
+    const parsed = new DOMParser().parseFromString(await (await fetch('../assets/' + f)).text(), 'image/svg+xml');
+    const svg = document.importNode(parsed.documentElement, true);
+    root.replaceChildren(svg);
+    if (font) { const st = document.createElementNS('http://www.w3.org/2000/svg', 'style'); st.textContent = 'text:not(.m){font-family:' + font + '!important}'; svg.append(st); }
+    // Measuring forces layout synchronously; no frame wait, which would stall in a hidden tab.
+    for (const a of document.getAnimations()) { a.pause(); a.currentTime = 60000; }
+    const W = +svg.getAttribute('width'), H = +svg.getAttribute('height'), base = svg.getBoundingClientRect();
+    const shown = (t) => { for (let e = t; e && e !== svg; e = e.parentElement) { const c = getComputedStyle(e); if (c.display === 'none' || +c.opacity === 0) return false; } return true; };
+    const boxes = [...svg.querySelectorAll('text')].filter(shown).map((t) => { const r = t.getBoundingClientRect(); return { s: t.textContent, x0: r.left - base.left, x1: r.right - base.left, y0: r.top - base.top, y1: r.bottom - base.top }; });
+    const issues = [];
+    for (const b of boxes) if (b.x0 < 0.5 || b.x1 > W - 0.5 || b.y0 < 0 || b.y1 > H + 1) issues.push('OUT ' + JSON.stringify(b.s));
+    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i], b = boxes[j];
+      if (Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) > 1.5 && Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) > 3.5) issues.push('HIT ' + JSON.stringify(a.s) + ' x ' + JSON.stringify(b.s));
+    }
+    if (issues.length) report.push(f + ': ' + issues.join('; '));
+  }
+  root.replaceChildren();
+  return report.length ? report.join('\\n') : 'clean: ' + FILES.length + ' files';
+}
+</script>`,
+);
+console.log('wrote preview/*.html, live.html, check.html and motion/');
