@@ -6,7 +6,8 @@ import { esc } from './svg.ts';
 // `#gh-light-mode-only` hrefs, so it follows the viewer's GitHub theme. Width variants are
 // <picture> sources with width-only queries: for a viewer with an explicit theme, GitHub's
 // <themed-picture> rewrites any prefers-color-scheme query and drops a width beside it. A mailto:
-// cannot carry the fragment, so the e-mail button alone uses prefers-color-scheme, and the OS theme.
+// cannot carry the fragment, so the e-mail button follows the OS theme, through queries written
+// without a space after the colon, which <themed-picture> does not recognise and leaves whole.
 
 const STATUS_TEXT: Record<Status, string> = {
   live: 'live',
@@ -24,6 +25,7 @@ export const ASSETS = 'https://raw.githubusercontent.com/ErtugrulTurkmen/Ertugru
 const PHONE = '(max-width: 600px), (min-width: 768px) and (max-width: 890px)';
 // Below 1280px the column is narrower than 846px, too narrow for two cards side by side.
 const NOT_FULL = '(max-width: 1279px)';
+const PHONE_LIGHT = PHONE.split(', ').map((q) => `${q} and (prefers-color-scheme:light)`).join(', ');
 
 const src = (name: string, mode: 'dark' | 'light', variant = '') => `${ASSETS}${name}${variant}-${mode}.svg`;
 
@@ -41,10 +43,15 @@ function pic(name: string, alt: string, { mobile = false, wide = false, href = '
     .join('');
 }
 
-const button = (href: string, name: string, alt: string): string =>
-  href.startsWith('mailto:')
-    ? `<a href="${esc(href)}"><picture><source media="(prefers-color-scheme: light)" srcset="${src(name, 'light')}"><img alt="${esc(alt)}" src="${src(name, 'dark')}"></picture></a>`
-    : pic(name, alt, { href });
+function button(href: string, name: string, alt: string): string {
+  if (!href.startsWith('mailto:')) return pic(name, alt, { href, mobile: true });
+  const sources: [media: string, file: string][] = [
+    [PHONE_LIGHT, src(name, 'light', '-mobile')],
+    [PHONE, src(name, 'dark', '-mobile')],
+    ['(prefers-color-scheme:light)', src(name, 'light')],
+  ];
+  return `<a href="${esc(href)}"><picture>${sources.map(([media, file]) => `<source media="${media}" srcset="${file}">`).join('')}<img alt="${esc(alt)}" src="${src(name, 'dark')}"></picture></a>`;
+}
 
 // Alt text holds no live numbers: README.md changes only on a rebuild, the drawings every 6 hours.
 export const heroAlt = (p: Profile): string =>
@@ -89,7 +96,7 @@ export function readme(p: Profile, projects: Project[], skills: Skills): string 
 
 <p align="center">${pic(`card-${feature.slug}`, cardAlt(feature), { mobile: true, href: `projects/${feature.slug}.md` })}</p>
 
-${button(feature.href, `btn-${feature.slug}`, `${feature.name} on the App Store`)} ${button(`projects/${feature.slug}.md`, 'btn-case', `${feature.name} case study`)}
+<p align="center">${button(feature.href, `btn-${feature.slug}`, `${feature.name} on the App Store`)} ${button(`projects/${feature.slug}.md`, 'btn-case', `${feature.name} case study`)}</p>
 
 ${rows.map((row) => `<p align="center">${row}</p>`).join('\n\n')}
 
@@ -103,7 +110,7 @@ ${rows.map((row) => `<p align="center">${row}</p>`).join('\n\n')}
 
 <p align="center">${pic('h-contact', 'Contact', { mobile: true })}</p>
 
-${button(p.linkedin, 'btn-linkedin', 'LinkedIn')} ${button(`mailto:${p.email}`, 'btn-email', `Email ${p.email}`)}
+<p align="center">${button(p.linkedin, 'btn-linkedin', 'LinkedIn')} ${button(`mailto:${p.email}`, 'btn-email', `Email ${p.email}`)}</p>
 
 <p align="center">${pic('titleblock', titleAlt(p), { mobile: true })}</p>
 `;

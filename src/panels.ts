@@ -453,10 +453,10 @@ export function caseHeader(t: Theme, layout: Layout, pr: Project, n: number, tit
 }
 
 // 48px tall: buttons keep their size on phones, where touch targets need 44pt or 48dp.
-export function button(t: Theme, kind: 'primary' | 'secondary', label: string, title: string): string {
+export function button(t: Theme, kind: 'primary' | 'secondary', label: string, title: string, o: { width?: number; padBottom?: number } = {}): string {
   const H = 48;
   const font: Font = { size: 11.5, mono: true, tracking: 1.2 };
-  const W = Math.round(22 + measure(label, font) + 14 + 10 + 22);
+  const W = o.width ?? Math.round(22 + measure(label, font) + 14 + 10 + 22);
   const fill = kind === 'primary' ? t.accent : t.rule;
   const edge = kind === 'primary' ? t.accent : t.mode === 'dark' ? '#45443f' : t.faces.right; // derived: dark surface, lifted to show on GitHub's canvas
   const color = kind === 'primary' ? t.panel : t.ink;
@@ -464,5 +464,5 @@ export function button(t: Theme, kind: 'primary' | 'secondary', label: string, t
     `<rect x=".5" y=".5" width="${W - 1}" height="${H - 1}" rx="6" fill="${fill}" stroke="${edge}"/>` +
     text(22, H / 2 + 4.5, label, { ...font, fill: color }) +
     `<path d="M${W - 32} ${H / 2 + 4}l8-8M${W - 30} ${H / 2 - 4}h6v6" fill="none" stroke="${color}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>`;
-  return doc(W, H, t, title, body);
+  return doc(W, H + (o.padBottom ?? 0), t, title, body);
 }

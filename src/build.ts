@@ -7,7 +7,7 @@ import { loadCalendar, loadStats } from './data.ts';
 import { aboutPanel, button, caseHeader, cardHeight, hero, projectCard, sectionHeader, skillsPanel, titleBlock, wideCard } from './panels.ts';
 import { aboutAlt, cardAlt, caseStudy, heroAlt, readme, skillsAlt, titleAlt } from './readme.ts';
 import { cases } from './cases.ts';
-import type { Layout } from './svg.ts';
+import { WIDTH, type Layout } from './svg.ts';
 import { themes } from './theme.ts';
 
 const ROOT = new URL('../', import.meta.url);
@@ -41,6 +41,8 @@ const sections: [slug: string, title: string, note: string | undefined][] = [
 // Where a pair of cards stacks inside one paragraph, the first carries the gap below it: about
 // 16px once scaled, plus the 5.5px line gap, matching the 22px between paragraphs.
 const STACK_GAP = { wide: 20, mobile: 18 };
+// On phones a pair of buttons stacks full width, 6px plus the line gap apart.
+const BUTTON_GAP = 6;
 const CALENDAR_FIG = projects.length + 1;
 
 for (const t of themes) {
@@ -64,10 +66,16 @@ for (const t of themes) {
   for (const layout of ['desktop', 'mobile'] as const) {
     write(name('calendar', layout, t.mode), calendar3d(t, layout, days, CALENDAR_FIG, `${stats.contributionsLastYear} contributions in the last 12 months`));
   }
-  write(`btn-${feature.slug}-${t.mode}.svg`, button(t, 'primary', 'VIEW ON THE APP STORE', `${feature.name} on the App Store`));
-  write(`btn-case-${t.mode}.svg`, button(t, 'secondary', 'READ THE CASE STUDY', `${feature.name} case study`));
-  write(`btn-linkedin-${t.mode}.svg`, button(t, 'secondary', 'LINKEDIN', 'LinkedIn'));
-  write(`btn-email-${t.mode}.svg`, button(t, 'secondary', profile.email.toUpperCase(), `Email ${profile.email}`));
+  const buttons: [name: string, kind: 'primary' | 'secondary', label: string, title: string, firstOfPair: boolean][] = [
+    [`btn-${feature.slug}`, 'primary', 'VIEW ON THE APP STORE', `${feature.name} on the App Store`, true],
+    ['btn-case', 'secondary', 'READ THE CASE STUDY', `${feature.name} case study`, false],
+    ['btn-linkedin', 'secondary', 'LINKEDIN', 'LinkedIn', true],
+    ['btn-email', 'secondary', profile.email.toUpperCase(), `Email ${profile.email}`, false],
+  ];
+  for (const [base, kind, label, title, firstOfPair] of buttons) {
+    write(name(base, 'desktop', t.mode), button(t, kind, label, title));
+    write(name(base, 'mobile', t.mode), button(t, kind, label, title, { width: WIDTH.mobile, padBottom: firstOfPair ? BUTTON_GAP : 0 }));
+  }
 }
 
 writeFileSync(new URL('README.md', ROOT), readme(profile, projects, skills));
