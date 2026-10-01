@@ -9,8 +9,10 @@ import { esc } from './svg.ts';
 //             is never combined with a width: for viewers with an explicit theme, GitHub's
 //             <themed-picture> rewrites such a query to always or never match, which drops the width
 //             with it and served phone drawings to desktops (checked 2026-09-30).
-// - button(): a <picture> with a prefers-color-scheme source alone, which <themed-picture> handles
-//             correctly; a #gh- fragment is unsafe on a mailto: link.
+// - button(): like pic(), one <a> per theme. A mailto: link cannot carry a #gh- fragment (it can
+//             end up in the address), so that one button is a <picture> with a prefers-color-scheme
+//             source, which follows the OS until GitHub's <themed-picture> script loads; for a
+//             logged-out visitor it never does (checked 2026-10-01).
 
 const STATUS_TEXT: Record<Status, string> = {
   live: 'live',
@@ -57,7 +59,9 @@ export function pic(name: string, alt: string, { mobile = false, wide = false, h
 }
 
 const button = (href: string, name: string, alt: string): string =>
-  `<a href="${esc(href)}"><picture><source media="(prefers-color-scheme: light)" srcset="${src(name, 'light')}"><img alt="${esc(alt)}" src="${src(name, 'dark')}"></picture></a>`;
+  href.startsWith('mailto:')
+    ? `<a href="${esc(href)}"><picture><source media="(prefers-color-scheme: light)" srcset="${src(name, 'light')}"><img alt="${esc(alt)}" src="${src(name, 'dark')}"></picture></a>`
+    : pic(name, alt, { href });
 
 // README.md on main changes only when its owner rebuilds it, while the drawings refresh every
 // 6 hours, so alt text carries no live numbers that would go stale between the two.
