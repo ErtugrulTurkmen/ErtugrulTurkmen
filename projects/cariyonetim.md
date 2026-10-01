@@ -11,21 +11,21 @@ Two companies needed to track customer current accounts, invoices, payment instr
 ## What I built
 
 - Customer accounts, invoices, payment instructions and balances in several currencies, with PDF and Excel export
-- A Windows installer with its own update channel, released up to v0.0.13
+- A Windows installer with its own update channel
 
 ## Security and privacy
 
-- Electron context isolation, a sandboxed renderer, no Node integration and a strict Content Security Policy
-- Database credentials encrypted with the operating system's keychain; the app refuses to decrypt when the keychain is unavailable
+- Electron context isolation, a sandboxed renderer, no Node integration and a Content Security Policy that limits scripts to the app
+- Database credentials encrypted with Electron safeStorage (Windows DPAPI); the app refuses to decrypt when it is unavailable
 - A device allow-list: the machine is checked against bcrypt-hashed identifiers before the app starts
 - Login lockout after repeated failures, and an authentication guard on the backend handlers
-- Zod validation of every call from the interface and of every database result; parameterized SQL with escaped search patterns
+- Zod validation of IPC inputs and of the main database reads; parameterized SQL with escaped search patterns
 - Obfuscated main-process code in release builds
 
 ## Engineering
 
-- Virtualised, paged customer lists with debounced search
-- Excel generation moved off the main thread into a worker, and pooled database connections
+- Virtualized, paged customer lists with debounced search
+- Most Excel exports built in a worker thread, and pooled database connections
 
 ## Status
 

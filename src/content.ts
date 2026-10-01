@@ -1,5 +1,5 @@
 // Everything the profile says, in one place. Edit here, then `npm run build`.
-// Facts about the projects come from the repositories themselves (see research_notes/…/projects_and_skills_inventory.md).
+// Facts about the projects come from the repositories themselves.
 
 export type Status = 'live' | 'in-use' | 'developed' | 'active' | 'in-development';
 
@@ -89,7 +89,7 @@ export const projects: Project[] = [
     highlights: [
       'Build fails if Lighthouse budgets regress',
       'Hardened contact form: validation, rate limit, CAPTCHA',
-      'Security headers, PII-free error reports',
+      'Security headers, error reports with PII off',
     ],
     stack: ['Next.js', 'Three.js', 'Playwright'],
     href: 'projects/temirtech.md',
@@ -105,7 +105,7 @@ export const projects: Project[] = [
     summary: 'Accounting and current-account management in Turkish and Greek, in use at two companies.',
     highlights: [
       'Encrypted DB credentials, device allow-list',
-      'Every IPC call validated, parameterized SQL',
+      'IPC inputs checked with Zod, parameterized SQL',
       'Login lockout, obfuscated release builds',
     ],
     stack: ['Electron', 'React', 'PostgreSQL'],
@@ -114,15 +114,15 @@ export const projects: Project[] = [
   {
     slug: 'exifcleaner',
     figure: 'exif',
-    caption: 'Metadata stripped on device',
+    caption: 'Goal: metadata off, on device',
     name: 'ExifCleaner',
     status: 'in-development',
     visibility: 'soon-public',
     kind: 'Desktop privacy tool',
-    summary: 'Strips EXIF and other metadata from photos on your own machine before you share them.',
+    summary: 'A desktop tool, in development, that will strip EXIF and other metadata from photos on your own machine.',
     highlights: [
-      'Nothing leaves the device',
-      'Context isolation, strict CSP from day one',
+      'Designed so nothing leaves the device',
+      'Context isolation and a CSP from day one',
       'Will be open source',
     ],
     stack: ['Electron', 'ExifTool', 'Tailwind'],
@@ -131,16 +131,16 @@ export const projects: Project[] = [
   {
     slug: 'repo-zero',
     figure: 'symlinks',
-    caption: 'One source, four agents',
+    caption: 'One source, every agent',
     name: 'repo-zero',
     status: 'active',
     visibility: 'private',
     kind: 'Rules and skills for AI coding agents',
-    summary: 'One source of truth for every coding agent I use, symlinked into Claude Code, Codex, Cursor and Cline.',
+    summary: 'One source of truth for every coding agent I use, symlinked into Claude Code, Codex, Cursor, Cline and Antigravity.',
     highlights: [
       '14 skills, 9 rules, 43 decision records',
       '217-check self-test, zero dependencies',
-      'CI on Linux and macOS, CodeQL scanning',
+      'CI on Linux and macOS, Node 22 and 24',
     ],
     stack: ['Node.js', 'Shell', 'GitHub Actions'],
     href: 'projects/repo-zero.md',

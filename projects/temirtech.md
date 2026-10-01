@@ -15,17 +15,17 @@ A project I built to learn two things in practice: 3D on the web with WebGL (Thr
 
 ## Security and privacy
 
-- Contact requests pass a honeypot, a Zod schema shared by client and server, a rate limit of 5 per 10 minutes per IP, CAPTCHA verification and sanitisation before any email is sent; the form fails safe when a key is missing
+- Contact requests pass a honeypot, a Zod schema shared by client and server, a rate limit of 5 per 10 minutes per IP, CAPTCHA verification and sanitization before any email is sent; without the CAPTCHA or mail key the form refuses to send
 - HSTS with preload, nosniff, a strict referrer policy, Permissions-Policy and COOP headers; security.txt (RFC 9116) published
 - Error reporting only in production, stored in the EU, with personal data off and no session replay
-- Configuration validated with Zod, so a bad environment fails the build instead of the site
+- Environment variables typed and validated with Zod
 
 ## Engineering
 
-- Lighthouse CI budgets fail the build: performance at least 0.95, LCP at most 1.5 s, TBT at most 200 ms, CLS at most 0.02, accessibility 1.0
+- Lighthouse CI budgets fail the build on desktop: performance at least 0.95, LCP at most 1.5 s, TBT at most 200 ms, CLS at most 0.02, accessibility 1.0
 - The 3D scene pauses off-screen and in background tabs, with adaptive resolution and a quality ladder
 - Playwright end-to-end, axe accessibility (WCAG AA) and visual-regression tests in CI
-- Renovate keeps pinned dependencies current, with vulnerability alerts
+- Exactly pinned dependencies; Renovate opens update and security pull requests
 
 ## Status
 

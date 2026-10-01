@@ -1,6 +1,5 @@
 // Case-study text, one per project, keyed by Project.slug. Every claim comes from the project's
-// own repository (research_notes/…/projects_and_skills_inventory.md); nothing names a client,
-// a private host or a file path. Edit here, then `npm run build`.
+// own repository; nothing names a client, a private host or a file path. Edit here, then `npm run build`.
 
 export type CaseStudy = {
   problem: string;
@@ -22,7 +21,7 @@ export const cases: Record<string, CaseStudy> = {
       'Excel export, and a full backup and restore that merges by ID and never overwrites existing data',
     ],
     security: [
-      'No network permission and no network calls; no analytics and no crash reporting. App Store privacy label: Data Not Collected',
+      'No networking code and no network calls; no analytics and no crash reporting. App Store privacy label: Data Not Collected',
       'Every entry is a transactional SQLite write (WAL, synchronous FULL), so a truck of manual work cannot be lost',
       'Its own XLSX writer instead of the npm package, whose installable version carries CVE-2023-30533',
       'Exactly pinned dependencies, 15 at runtime; CI actions pinned to commit SHAs with read-only permissions',
@@ -30,7 +29,7 @@ export const cases: Record<string, CaseStudy> = {
     engineering: [
       'Layered architecture (app, features, state, data, domain, lib, ui) enforced by lint import rules; the domain layer is pure TypeScript',
       'CI fails below 100% branch, function, line and statement coverage in every layer; tests run against a real in-memory SQLite',
-      'A 90-line Objective-C++ TurboModule replaced an 800-line third-party document picker',
+      'A ~100-line Objective-C++ TurboModule instead of an 800-line third-party document picker',
       'Native iOS components throughout, with VoiceOver, Dynamic Type and Reduce Motion support',
       'First commit to App Store approval in 14 days, approved on first review, with 275 numbered design decisions on record',
     ],
@@ -47,16 +46,16 @@ export const cases: Record<string, CaseStudy> = {
       'Service, legal and contact pages in both languages, with hreflang, structured data and generated social images',
     ],
     security: [
-      'Contact requests pass a honeypot, a Zod schema shared by client and server, a rate limit of 5 per 10 minutes per IP, CAPTCHA verification and sanitisation before any email is sent; the form fails safe when a key is missing',
+      'Contact requests pass a honeypot, a Zod schema shared by client and server, a rate limit of 5 per 10 minutes per IP, CAPTCHA verification and sanitization before any email is sent; without the CAPTCHA or mail key the form refuses to send',
       'HSTS with preload, nosniff, a strict referrer policy, Permissions-Policy and COOP headers; security.txt (RFC 9116) published',
       'Error reporting only in production, stored in the EU, with personal data off and no session replay',
-      'Configuration validated with Zod, so a bad environment fails the build instead of the site',
+      'Environment variables typed and validated with Zod',
     ],
     engineering: [
-      'Lighthouse CI budgets fail the build: performance at least 0.95, LCP at most 1.5 s, TBT at most 200 ms, CLS at most 0.02, accessibility 1.0',
+      'Lighthouse CI budgets fail the build on desktop: performance at least 0.95, LCP at most 1.5 s, TBT at most 200 ms, CLS at most 0.02, accessibility 1.0',
       'The 3D scene pauses off-screen and in background tabs, with adaptive resolution and a quality ladder',
       'Playwright end-to-end, axe accessibility (WCAG AA) and visual-regression tests in CI',
-      'Renovate keeps pinned dependencies current, with vulnerability alerts',
+      'Exactly pinned dependencies; Renovate opens update and security pull requests',
     ],
     status: 'Developed. The source is private.',
   },
@@ -64,33 +63,33 @@ export const cases: Record<string, CaseStudy> = {
     problem: 'Two companies needed to track customer current accounts, invoices, payment instructions and balances, in Turkish and Greek, from Windows desktops sharing one PostgreSQL server.',
     built: [
       'Customer accounts, invoices, payment instructions and balances in several currencies, with PDF and Excel export',
-      'A Windows installer with its own update channel, released up to v0.0.13',
+      'A Windows installer with its own update channel',
     ],
     security: [
-      'Electron context isolation, a sandboxed renderer, no Node integration and a strict Content Security Policy',
-      "Database credentials encrypted with the operating system's keychain; the app refuses to decrypt when the keychain is unavailable",
+      'Electron context isolation, a sandboxed renderer, no Node integration and a Content Security Policy that limits scripts to the app',
+      'Database credentials encrypted with Electron safeStorage (Windows DPAPI); the app refuses to decrypt when it is unavailable',
       'A device allow-list: the machine is checked against bcrypt-hashed identifiers before the app starts',
       'Login lockout after repeated failures, and an authentication guard on the backend handlers',
-      'Zod validation of every call from the interface and of every database result; parameterized SQL with escaped search patterns',
+      'Zod validation of IPC inputs and of the main database reads; parameterized SQL with escaped search patterns',
       'Obfuscated main-process code in release builds',
     ],
     engineering: [
-      'Virtualised, paged customer lists with debounced search',
-      'Excel generation moved off the main thread into a worker, and pooled database connections',
+      'Virtualized, paged customer lists with debounced search',
+      'Most Excel exports built in a worker thread, and pooled database connections',
     ],
     status: 'In use at two companies. The source is private.',
   },
   exifcleaner: {
     problem: 'Photos carry location, camera and time metadata that people rarely mean to share.',
     built: [
-      'A desktop tool you drop photos onto and get clean copies back, with EXIF and other metadata removed on your own machine',
+      'So far: a hardened Electron shell and a drag-and-drop window; removing EXIF and other metadata on your own machine comes next',
       'Planned: processing in a background worker, a tray mode and remembered settings',
     ],
     security: [
-      'An Electron shell with context isolation, no Node integration and a Content Security Policy from the first commit',
-      'Nothing is uploaded anywhere, and the code will be open so anyone can check that',
+      'An Electron shell with context isolation, no Node integration and a Content Security Policy from day one',
+      'Designed so nothing is uploaded anywhere, and the code will be open so anyone can check that',
     ],
-    engineering: ['A small main process with a clear split between the interface, the IPC controller and the metadata service'],
+    engineering: ['A planned split between the interface, the IPC controller and the metadata service, already laid out as modules'],
     status: 'Early development: the secure shell and the drag-and-drop interface. It will be open source.',
   },
   'repo-zero': {
@@ -98,7 +97,7 @@ export const cases: Record<string, CaseStudy> = {
       'Every coding agent I use (Claude Code, Codex, Cursor, Cline and Antigravity) needs the same working agreements, and copying them into each project makes them drift apart.',
     built: [
       'One repository of rules, skills and templates, symlinked into each agent, so improving it once improves every project',
-      '14 skills, among them kickoff, challenge, design, secure, perf, ship, code review and verify, and 9 path-scoped rules for TypeScript, React, React Native, databases and CI',
+      '14 skills, among them kickoff, challenge, design, secure, perf, ship, code review and verify, and 9 rules, 8 of them path-scoped, for TypeScript, React, React Native, databases and CI',
       '43 architecture decision records, and a README in English and Turkish',
     ],
     security: [
@@ -107,8 +106,8 @@ export const cases: Record<string, CaseStudy> = {
     ],
     engineering: [
       'Two deterministic checkers, a UI anti-pattern detector and a security scanner, tested against clean, dirty and evasion fixtures',
-      'A 217-assertion self-verification suite; CI on Linux (Node 22 and 24) and macOS, plus CodeQL',
+      'A 217-assertion self-verification suite; CI on Linux (Node 22 and 24) and macOS',
     ],
-    status: 'Active and in daily use. The source is private for now, under the MIT licence.',
+    status: 'Active and in daily use. The source is private for now, under the MIT license.',
   },
 };

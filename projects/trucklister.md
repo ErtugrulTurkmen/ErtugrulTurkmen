@@ -17,7 +17,7 @@ A loading crew records which of a truck's four doors each numbered product goes 
 
 ## Security and privacy
 
-- No network permission and no network calls; no analytics and no crash reporting. App Store privacy label: Data Not Collected
+- No networking code and no network calls; no analytics and no crash reporting. App Store privacy label: Data Not Collected
 - Every entry is a transactional SQLite write (WAL, synchronous FULL), so a truck of manual work cannot be lost
 - Its own XLSX writer instead of the npm package, whose installable version carries CVE-2023-30533
 - Exactly pinned dependencies, 15 at runtime; CI actions pinned to commit SHAs with read-only permissions
@@ -26,7 +26,7 @@ A loading crew records which of a truck's four doors each numbered product goes 
 
 - Layered architecture (app, features, state, data, domain, lib, ui) enforced by lint import rules; the domain layer is pure TypeScript
 - CI fails below 100% branch, function, line and statement coverage in every layer; tests run against a real in-memory SQLite
-- A 90-line Objective-C++ TurboModule replaced an 800-line third-party document picker
+- A ~100-line Objective-C++ TurboModule instead of an 800-line third-party document picker
 - Native iOS components throughout, with VoiceOver, Dynamic Type and Reduce Motion support
 - First commit to App Store approval in 14 days, approved on first review, with 275 numbered design decisions on record
 
