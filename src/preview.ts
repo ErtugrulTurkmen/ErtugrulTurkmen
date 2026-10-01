@@ -101,11 +101,14 @@ async function check(font) {
     for (const a of document.getAnimations()) { a.pause(); a.currentTime = 60000; }
     const W = +svg.getAttribute('width'), H = +svg.getAttribute('height'), base = svg.getBoundingClientRect();
     const shown = (t) => { for (let e = t; e && e !== svg; e = e.parentElement) { const c = getComputedStyle(e); if (c.display === 'none' || +c.opacity === 0) return false; } return true; };
-    const boxes = [...svg.querySelectorAll('text')].filter(shown).map((t) => { const r = t.getBoundingClientRect(); return { s: t.textContent, x0: r.left - base.left, x1: r.right - base.left, y0: r.top - base.top, y1: r.bottom - base.top }; });
+    const boxes = [...svg.querySelectorAll('text')].filter(shown).map((t) => { const r = t.getBoundingClientRect(); return { s: t.textContent, x: t.getAttribute('x'), y: +t.getAttribute('y'), size: +t.getAttribute('font-size'), x0: r.left - base.left, x1: r.right - base.left, y0: r.top - base.top, y1: r.bottom - base.top }; });
     const issues = [];
     for (const b of boxes) if (b.x0 < 0.5 || b.x1 > W - 0.5 || b.y0 < 0 || b.y1 > H + 1) issues.push('OUT ' + JSON.stringify(b.s));
     for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
       const a = boxes[i], b = boxes[j];
+      // Lines of one paragraph: their boxes span the font's whole ascent and descent, which overlap at
+      // normal leading without the glyphs touching.
+      if (a.x === b.x && a.size === b.size && Math.abs(a.y - b.y) >= a.size * 1.1) continue;
       if (Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) > 1.5 && Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) > 3.5) issues.push('HIT ' + JSON.stringify(a.s) + ' x ' + JSON.stringify(b.s));
     }
     if (issues.length) report.push(f + ': ' + issues.join('; '));

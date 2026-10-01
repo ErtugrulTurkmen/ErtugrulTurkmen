@@ -31,13 +31,13 @@ const now: NowItem[] = [
 
 /** [title, text] for the About panel's numbered column. */
 const principles: [string, string][] = [
-  ['Security and privacy first', "Linux and open source over closed ecosystems; offline-first apps that collect nothing they don't need."],
-  ['Shipped to production', 'TruckLister went from first commit to App Store approval in 14 days, with CI rejecting anything under 100% test coverage.'],
-  ['How I work', 'Clean architecture, tests as the gate, and AI-assisted development under a rule set I maintain myself.'],
+  ['Security and privacy by default', "Hardened Electron shells, inputs validated at every boundary, credentials encrypted at rest, and offline-first apps that collect nothing they don't need."],
+  ['Shipped, not just started', 'TruckLister went from first commit to App Store approval in 14 days, with CI rejecting anything under 100% test coverage.'],
+  ['How I work', 'Layered architecture with enforced boundaries, tests and CI as the gate, exactly pinned dependencies, and every decision written down. AI coding agents work under repo-zero, the rule set I maintain myself.'],
 ];
 
 export const profile = {
-  name: 'Ertuğrul Türkmen',
+  name: 'Ertuğrul Efe Türkmen',
   eyebrow: 'Computer Engineering · Istinye University · 4th year',
   tagline: 'Building secure, high-performance software that lasts, across web, desktop and mobile.',
   focus: ['Security', 'Privacy', 'Linux', 'Performance', 'Sustainability'],
@@ -45,8 +45,12 @@ export const profile = {
   linkedin: 'https://www.linkedin.com/in/ertu%C4%9Frul-efe-t%C3%BCrkmen-7676282b8',
   email: 'ertugrulturkmen@proton.me',
   about: {
-    quote: 'I treat software as something people depend on.',
-    intro: '4th-year Computer Engineering student at Istinye University, building software that is secure by default, fast, and maintainable for years, not just working today.',
+    lede: "I'm Ertuğrul Efe Türkmen, a 4th-year Computer Engineering student at Istinye University.",
+    paragraphs: [
+      'I build software for mobile, desktop and the web, mostly in TypeScript. One of my apps is live on the App Store, and a Windows accounting app I wrote is in use at two companies.',
+      "I care about what happens after launch: software that is secure by default, keeps people's data on their own device, stays fast on modest hardware, and is still easy to change years later.",
+      'I lean toward Linux and open-source tools, and I am learning Rust.',
+    ],
     principles,
   },
 };

@@ -22,6 +22,12 @@ const UP = '@keyframes up{from{opacity:0;transform:translateY(6px)}}.up{animatio
 
 const LABEL: Font = { size: 10.5, mono: true, tracking: 1 };
 
+/**
+ * Room for a serif line. Phone drawings keep only 20px beside their text, so their lines wrap 6%
+ * short of it, enough for the widest fallback faces (DejaVu Serif, Sitka); desktop panels have more.
+ */
+const fit = (d: boolean, w: number): number => (d ? w : w * 0.94);
+
 /** Phone drawings render at 0.87–1.6×, so no label there is set below 11px. */
 const lab = (d: boolean, size = LABEL.size): Font => ({ ...LABEL, size: d ? size : Math.max(size, 11) });
 
@@ -76,12 +82,17 @@ export function hero(t: Theme, layout: Layout, p: Profile, s: Stats, title: stri
   if (d) out.push(text(W - pad, 46, rev, { ...L, fill: t.meta, anchor: 'end', cls: 'up' }));
 
   y += d ? 64 : 48;
-  out.push(text(pad, y, p.name, { size: d ? 52 : 32, weight: 500, tracking: d ? -1.2 : -0.6, cls: 'up', delay: 80 }));
+  const nameFont: Font = { size: d ? 52 : 32, weight: 500, tracking: d ? -1.2 : -0.6 };
+  // 1.15 leading: the ğ of one line and the Ü of the next need the room.
+  const nameLH = d ? 60 : 37;
+  const nameLines = wrap(p.name, fit(d, leftW), nameFont);
+  nameLines.forEach((line, i) => out.push(text(pad, y + i * nameLH, line, { ...nameFont, cls: 'up', delay: 80 })));
+  y += (nameLines.length - 1) * nameLH;
 
   const tagFont: Font = { size: d ? 18.5 : 16 };
   const lh = d ? 27 : 23;
   y += d ? 40 : 32;
-  const tagline = wrap(p.tagline, leftW, tagFont);
+  const tagline = wrap(p.tagline, fit(d, leftW), tagFont);
   tagline.forEach((line, i) => out.push(text(pad, y + i * lh, line, { ...tagFont, fill: t.muted, cls: 'up', delay: 140 })));
   y += (tagline.length - 1) * lh + 30;
 
@@ -121,7 +132,7 @@ export function hero(t: Theme, layout: Layout, p: Profile, s: Stats, title: stri
   const nowFont: Font = { size: d ? 15.5 : 15 };
   const textX = d ? pad + 96 : pad;
   p.now.forEach((item, i) => {
-    const lines = wrap(item.text, d ? pad + leftW - textX : leftW, nowFont);
+    const lines = wrap(item.text, d ? pad + leftW - textX : fit(d, leftW), nowFont);
     const ty = d ? y : y + 20;
     out.push(
       `<g class="up" style="animation-delay:${260 + i * 70}ms">` +
@@ -180,14 +191,14 @@ function cardText(t: Theme, pr: Project, x: number, y0: number, w: number, big: 
   kind.forEach((line, i) => out.push(text(x, y + i * 16, line, { ...kindFont, fill: t.meta })));
   y += (kind.length - 1) * 16 + (big ? 34 : 30);
   const sFont: Font = { size: big ? 16 : 15 };
-  for (const line of wrap(pr.summary, w, sFont)) {
+  for (const line of wrap(pr.summary, fit(d, w), sFont)) {
     out.push(text(x, y, line, { ...sFont, fill: t.ink2 }));
     y += big ? 24 : 22;
   }
   y += 10;
   const hFont: Font = { size: 14 };
   pr.highlights.forEach((h, i) => {
-    const lines = wrap(h, w - 28, hFont);
+    const lines = wrap(h, fit(d, w - 28), hFont);
     out.push(text(x, y, `0${i + 1}`, { ...lab(d, 10), fill: t.accent }));
     lines.forEach((line, j) => out.push(text(x + 28, y + j * 20, line, { ...hFont, fill: t.muted })));
     y += lines.length * 20 + 3;
@@ -326,7 +337,7 @@ export function skillsPanel(t: Theme, layout: Layout, skills: Skills, title: str
   out.push(rule(t, pad, rowY + 8, W - pad * 2));
   out.push(text(pad, rowY + 38, skills.practices.title.toUpperCase(), { ...L, fill: t.ink2 }));
   const pFont: Font = { size: d ? 15 : 14 };
-  const lines = wrap(skills.practices.items.join(' · '), W - pad * 2, pFont, ' · ');
+  const lines = wrap(skills.practices.items.join(' · '), fit(d, W - pad * 2), pFont, ' · ');
   lines.forEach((line, i) => out.push(text(pad, rowY + 64 + i * 23, line, { ...pFont, fill: t.muted })));
   const H = rowY + 64 + (lines.length - 1) * 23 + 28;
   return doc(W, H, t, title, panel(t, W, H) + out.join(''));
@@ -358,40 +369,49 @@ export function aboutPanel(t: Theme, layout: Layout, p: Profile, title: string):
   const W = WIDTH[layout];
   const pad = d ? 32 : 20;
   const out: string[] = [text(pad, 44, 'ABSTRACT', { ...lab(d), fill: t.meta })];
+  // The lede introduces him across the full width; on desktop the bio and the principles then
+  // share two columns under a hairline.
+  const ledeFont: Font = { size: d ? 22 : 18, weight: 500 };
+  let y = d ? 84 : 76;
+  for (const line of wrap(p.about.lede, fit(d, W - pad * 2), ledeFont)) {
+    out.push(text(pad, y, line, { ...ledeFont, tracking: -0.3 }));
+    y += d ? 30 : 26;
+  }
+  const top = y + (d ? 4 : 2);
+  out.push(rule(t, pad, top, W - pad * 2));
+  y = top + (d ? 34 : 30);
+
   const leftW = d ? 300 : W - pad * 2;
-  const qFont: Font = { size: d ? 26 : 22, weight: 500 };
-  let y = d ? 88 : 80;
-  for (const line of wrap(p.about.quote, leftW, qFont)) {
-    out.push(text(pad, y, line, { ...qFont, tracking: -0.4 }));
-    y += d ? 34 : 29;
-  }
-  y += 8;
   const iFont: Font = { size: 15 };
-  for (const line of wrap(p.about.intro, leftW, iFont)) {
-    out.push(text(pad, y, line, { ...iFont, fill: t.muted }));
-    y += 23;
-  }
+  p.about.paragraphs.forEach((para, i) => {
+    if (i) y += 10;
+    for (const line of wrap(para, fit(d, leftW), iFont)) {
+      out.push(text(pad, y, line, { ...iFont, fill: t.muted }));
+      y += 23;
+    }
+  });
 
   const rx = d ? 392 : pad;
   const rw = d ? W - pad - rx : W - pad * 2;
-  let ry = d ? 44 : y + 28;
+  let ry = d ? top + 34 : y + 28;
   if (!d) out.push(rule(t, pad, y + 2, rw));
   const bFont: Font = { size: 15 };
+  const hFont: Font = { size: 17, weight: 500 };
   p.about.principles.forEach(([head, body], i) => {
     if (i) ry += 20;
     out.push(text(rx, ry, `0${i + 1}`, { ...lab(d, 10), fill: t.accent }));
-    for (const line of wrap(head, rw - 28, { size: 17, weight: 500 })) {
-      out.push(text(rx + 28, ry + 1, line, { size: 17, weight: 500 }));
+    for (const line of wrap(head, fit(d, rw - 28), hFont)) {
+      out.push(text(rx + 28, ry + 1, line, hFont));
       ry += 23;
     }
     ry += 3;
-    for (const line of wrap(body, rw - 28, bFont)) {
+    for (const line of wrap(body, fit(d, rw - 28), bFont)) {
       out.push(text(rx + 28, ry, line, { ...bFont, fill: t.muted }));
       ry += 22;
     }
   });
   const H = Math.max(y, ry) + (d ? 22 : 18);
-  const columnRule = d ? `<rect x="364" y="30" width="1" height="${round(H - 60)}" fill="${t.rule}"/>` : '';
+  const columnRule = d ? `<rect x="364" y="${round(top + 14)}" width="1" height="${round(H - top - 36)}" fill="${t.rule}"/>` : '';
   return doc(W, H, t, title, panel(t, W, H) + columnRule + out.join(''));
 }
 
@@ -399,7 +419,7 @@ export function aboutPanel(t: Theme, layout: Layout, p: Profile, title: string):
 function cells(t: Theme, d: boolean, W: number, items: [string, string][], widths: number[], cols: number, top: number, closingRule: boolean): { svg: string; y: number } {
   const vFont: Font = { size: 15 };
   // Lists break at their separators first; a piece too long for the cell then breaks between words.
-  const values = items.map(([, value], i) => wrap(value, widths[i] * W - 30, vFont, ' · ').flatMap((line) => wrap(line, widths[i] * W - 30, vFont)));
+  const values = items.map(([, value], i) => wrap(value, fit(d, widths[i] * W - 30), vFont, ' · ').flatMap((line) => wrap(line, fit(d, widths[i] * W - 30), vFont)));
   const out: string[] = [];
   let y = top;
   for (let r = 0; r < items.length; r += cols) {
@@ -431,7 +451,7 @@ export function titleBlock(t: Theme, layout: Layout, p: Profile, s: Stats, sheet
   const note = 'Numbers and drawings are regenerated from live GitHub data. Private work is counted, never named.';
   const grid = cells(t, d, W, items, d ? [0.34, 0.3, 0.19, 0.17] : [0.5, 0.5, 0.5, 0.5], d ? 4 : 2, 0, true);
   const nFont: Font = { size: 14 };
-  const lines = wrap(note, W - 84, nFont);
+  const lines = wrap(note, fit(d, W - 84), nFont);
   const out = [grid.svg, text(16, grid.y + 26, 'NOTE', { ...lab(d, 9), fill: t.meta })];
   lines.forEach((line, i) => out.push(text(68, grid.y + 26 + i * 20, line, { ...nFont, fill: t.muted })));
   const H = grid.y + 26 + (lines.length - 1) * 20 + 20;

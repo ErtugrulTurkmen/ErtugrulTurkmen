@@ -75,7 +75,7 @@ export const skillsAlt = (s: Skills): string =>
   [...s.groups, s.practices].map((g) => `${g.title}: ${g.items.join(', ')}`).join('. ') + '.';
 
 export const aboutAlt = (p: Profile): string =>
-  `${p.about.quote} ${p.about.intro} ` + p.about.principles.map(([head, body]) => `${head}: ${body}`).join(' ');
+  `${p.about.lede} ${p.about.paragraphs.join(' ')} ` + p.about.principles.map(([head, body]) => `${head}: ${body}`).join(' ');
 
 export const titleAlt = (p: Profile): string =>
   `Drawn by ${p.name}. Checked by GitHub Actions every 6 hours, with the date of the last revision. ` +

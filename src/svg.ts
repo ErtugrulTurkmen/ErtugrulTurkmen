@@ -44,16 +44,19 @@ export function measure(s: string, f: Font): number {
 /**
  * Wraps at `sep` (words by default) into as few lines as fit `maxWidth`, then chooses, among the
  * breaks giving that many lines, the raggedness a typesetter would: lines before the last as full
- * as possible, and a last line of at least 40% so it is never a lone orphan. Two capitalised words
- * in a row are a name ("Claude Code", "App Store") and never break apart.
+ * as possible, and a last line of at least 40% so it is never a lone orphan. Capitalised words in a
+ * row are a name ("Claude Code", "Ertuğrul Efe Türkmen") and stay on one line when they fit.
  */
 export function wrap(s: string, maxWidth: number, f: Font, sep = ' '): string[] {
-  const words: string[] = [];
+  // A run of capitalised words is one unit, unless the run alone is wider than a line.
+  const runs: string[][] = [];
   for (const w of s.split(sep)) {
-    const prev = words.at(-1);
-    if (sep === ' ' && prev && !prev.includes(sep) && /^[A-Z]/.test(prev) && /[A-Za-z]$/.test(prev) && /^[A-Z]/.test(w)) words[words.length - 1] = prev + sep + w;
-    else words.push(w);
+    const run = runs.at(-1);
+    const last = run?.at(-1);
+    if (sep === ' ' && last && /^\p{Lu}/u.test(last) && /\p{L}$/u.test(last) && /^\p{Lu}/u.test(w)) run.push(w);
+    else runs.push([w]);
   }
+  const words = runs.flatMap((run) => (measure(run.join(sep), f) <= maxWidth ? [run.join(sep)] : run));
   const width = (i: number, j: number) => measure(words.slice(i, j).join(sep), f);
   // Greedy fill gives the fewest lines.
   let count = 0;
